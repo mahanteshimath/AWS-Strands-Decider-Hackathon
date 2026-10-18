@@ -15,12 +15,14 @@
 .EXAMPLE
   ./infra/ec2_up.ps1                      # profile "hackathon", us-east-1, g6.xlarge (GPU)
   ./infra/ec2_up.ps1 -Cpu                 # c7i.4xlarge on CPU, while the GPU quota is pending
+  ./infra/ec2_up.ps1 -NewInstance         # launch a second host (e.g. a GPU one beside a stopped CPU one)
 #>
 param(
     [string]$Profile = "hackathon",
     [string]$Region = "us-east-1",
     [string]$InstanceType = "",
     [switch]$Cpu,
+    [switch]$NewInstance,
     [int]$DiskGb = 100
 )
 if (-not $InstanceType) { $InstanceType = if ($Cpu) { "c7i.4xlarge" } else { "g6.xlarge" } }
@@ -80,7 +82,7 @@ if (-not (AwsQuiet s3api head-bucket --bucket $bucket)) {
 
 # ---- Existing instance? --------------------------------------------------------------------
 $existing = AwsQuiet ec2 describe-instances --filters "Name=tag:Name,Values=tariff-trail-decider" "Name=instance-state-name,Values=pending,running,stopping,stopped" --query "Reservations[0].Instances[0].[InstanceId,State.Name]"
-if ($existing -and $existing -notmatch "None") {
+if (-not $NewInstance -and $existing -and $existing -notmatch "None") {
     $id, $state = $existing -split "\s+"
     if ($state -eq "stopped") { Aws ec2 start-instances --instance-ids $id | Out-Null; Write-Host "starting $id" }
     else { Write-Host "$id is $state" }

@@ -119,13 +119,14 @@ def main() -> None:
     parser.add_argument("--split", choices=("dev", "test"), default="dev")
     parser.add_argument("--limit", type=int)
     parser.add_argument("--workers", type=int, default=2)
+    parser.add_argument("--out-dir", help="write under eval/results/<out-dir> instead of <split> (used for the GPU latency run)")
     args = parser.parse_args()
 
     tree = load()
     cases = [json.loads(line) for line in (EVAL / f"{args.split}.jsonl").open(encoding="utf-8")]
     if args.limit:
         cases = cases[: args.limit]
-    out_dir = RESULTS / args.split
+    out_dir = RESULTS / (args.out_dir or args.split)
     out_dir.mkdir(parents=True, exist_ok=True)
     out_path = out_dir / f"{args.system}.jsonl"
     done = {}

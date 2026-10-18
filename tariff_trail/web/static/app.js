@@ -192,6 +192,8 @@ async function init() {
       $("replays").append(option);
     }
     if (!list.length) $("replays").append(el("option", null, "no recorded runs yet"));
+    const featured = list.find((item) => item.id === "N357194");
+    if (featured && $("go").disabled) { $("replays").value = featured.id; replay(); }
   } catch (err) { /* replay list is optional */ }
 }
 

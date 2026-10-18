@@ -69,7 +69,7 @@ mkdir -p eval/results
 # evaluation appends to its file, and replacing it would orphan every row written since.
 rm -rf /tmp/tt-results-in && mkdir -p /tmp/tt-results-in
 aws s3 sync s3://$bucket/results/ /tmp/tt-results-in/ --quiet --region $Region || true
-cp -r --update=none /tmp/tt-results-in/. eval/results/ || true
+cp -rn /tmp/tt-results-in/. eval/results/ || true
 export AWS_REGION=$Region STRANDS_DECIDER_URL=http://127.0.0.1:8099 PYTHONUNBUFFERED=1
 # SSM runs this with /bin/sh, so use "." rather than "source"; keep going after a failure to sync results.
 . /home/ubuntu/decider-venv/bin/activate
