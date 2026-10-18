@@ -1,0 +1,5 @@
+# Shell scripts run on Linux (EC2 user data, SSM): always LF, whatever the cloning platform.
+*.sh text eol=lf
+# Keep data and result files byte-identical across platforms.
+*.jsonl text eol=lf
+*.json text eol=lf
