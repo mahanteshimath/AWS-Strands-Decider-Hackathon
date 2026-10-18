@@ -82,6 +82,9 @@ python -m tariff_trail.agent "Classify and file: women's knitted pullover, 44% p
 pytest                                                       # offline tests, no GPU needed
 ```
 
+A replay-only copy of the demo UI (392 real recorded runs, no live Decider) is hosted on AWS Amplify:
+https://main.d3o5ktn9yc15oj.amplifyapp.com/ . `python scripts/export_static.py` rebuilds it into `site/`.
+
 `infra/` holds the AWS setup actually used: an SSM-only EC2 host with no inbound ports, an IAM
 instance role for Bedrock, a private S3 bucket, a $50 budget alert, and an SSM runner.
 

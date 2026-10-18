@@ -21,3 +21,13 @@ video/**/.hyperframes/
 .snowflake/
 .env
 *.log
+
+site/
+site.zip
+video/*/.thumbnails/
+video/*/.waveform-cache/
+video/*/snapshots/
+video/*/renders/
+video/*/assets/voice/*.wav
+video/*/AGENTS.md
+video/*/CLAUDE.md

@@ -1,10 +1,10 @@
-# TariffTrail — hackathon video script (DRAFT for gate 1)
+# TariffTrail — hackathon video script (gate 1: for approval)
 
-Target: 16:9, ~2:35, narrated in the builder's cloned voice. `⟨TT⟩` = TariffTrail test-set number,
-filled from eval/RESULTS.md when the test run finishes. All other numbers are measured.
+Target: 16:9, about 2:35, narrated in the builder's cloned voice. Every number is measured on 332
+held-out 2026 CBP rulings (eval/RESULTS.md) unless marked otherwise.
 
 ## L01 · hook
-say: Since August 2025, every parcel entering the United States needs one of eighteen thousand nine hundred tariff codes.
+say: Since August 2025, every parcel entering the United States needs one of nearly nineteen thousand tariff codes.
 show: A parcel drops onto a conveyor; a counter spins up to 18,946 codes behind it.
 
 ## L02 · the failure
@@ -13,10 +13,10 @@ show: Answers stamp onto a wall; most get a red DOES NOT EXIST stamp. Caption: 9
 
 ## L03 · tools do not fix it
 say: Give it search tools, and it wanders. One product took two hundred and one tool calls and nineteen million tokens.
-show: A tool-call counter racing to 201, tokens to 19.6M, an agent loop spinning.
+show: A tool-call counter racing to 201, tokens to 19.6M, an agent loop spinning. Caption: one uncapped tuning run.
 
 ## L04 · the reframe
-say: The model was not stupid. It was asked the wrong question. Not which of eighteen thousand, but which of these four.
+say: The model was not stupid. It was asked the wrong question. Not which of nineteen thousand, but which of these four.
 show: 18,946 tiles collapse into four cards.
 
 ## L05 · enter Decider
@@ -48,20 +48,20 @@ say: Each card is one Decider decision. Green is chosen, red is none of these. T
 show: Trail cards animate in with probability bars; result card with code, path and duty.
 
 ## L12 · the gate
-say: Filing is an action, so a Strands intervention guards it. Invented codes are denied. Everything else waits for a licensed broker.
+say: Filing is an action, so a Strands intervention guards it. Invented codes are denied, and every entry waits for a licensed broker.
 show: ClassificationGate: Deny, Guide, Confirm chips light up in turn.
 
 ## L13 · results
-say: On three hundred thirty two held-out rulings, TariffTrail got ⟨TT⟩ percent of full codes right. The tool-using agent got nineteen. The plain model, almost none.
-show: Bar chart: TariffTrail ⟨TT⟩%, nearest ruling 24.4%, LLM agent 19.0%, LLM direct 0.3%.
+say: On three hundred thirty two held-out rulings, TariffTrail got thirty seven percent of full codes exactly right. The tool-using agent got nineteen. The plain model, almost none.
+show: Bar chart: TariffTrail 36.7%, Decider alone 25.3%, nearest ruling 24.4%, LLM agent 19.0%, LLM direct 0.3%. Small print: p = 1.3e-7 vs agent.
 
 ## L14 · cost
-say: With zero invented codes, and about seven times fewer Bedrock tokens than the agent.
-show: 0% invented vs 19%; tokens per product ⟨TT tokens⟩ vs 9,789.
+say: With zero invented codes, and nearly eight times fewer Bedrock tokens than the agent.
+show: 0% invented vs 19%; tokens per product 1,258 vs 9,789.
 
 ## L15 · honesty
-say: One thing did not work. Decider's path probability did not predict when it was right, so TariffTrail never files a tariff code on its own.
-show: Calibration chart, flat. Stamp: BROKER REVIEW.
+say: One idea did not hold up. Decider's confidence was not reliable enough to file a customs entry alone, so every filing goes to a broker, and when three sources agree, it is fast-tracked. Three in four of those are right.
+show: Calibration bars, then two queues: FAST-TRACK 16% at 76% correct, FULL REVIEW 29%.
 
 ## L16 · reuse
 say: The pattern is one file. Pointed at forty eight tools, it routed twenty three of twenty four requests, and the one miss asked first.
