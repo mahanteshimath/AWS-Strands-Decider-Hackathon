@@ -113,6 +113,23 @@ Test split: 332 held-out 2026 rulings, run once with the configuration frozen on
 For scale: the ATLAS benchmark reports 25% at 10 digits for GPT-5-Thinking on its own HTS test
 set. Ten-digit tariff classification is hard, and nobody should file one unreviewed yet.
 
+## Latency: 61 seconds on CPU, 2.6 seconds on a GPU
+
+Eighteen Decider calls per product is only sensible if each call is cheap, so I measured it twice.
+The frozen test run used a CPU host (my GPU quota was still zero when I froze the test):
+**2.5 s per Decider call, 61 s per product**. When the quota arrived I ran the *same* 332 products
+again, unchanged, on a g6.xlarge with an NVIDIA L4:
+
+| | CPU (c7i.4xlarge) | GPU (g6.xlarge, L4) |
+|---|---|---|
+| Decider call, p50 / p95 | 2,499 / 5,144 ms | **72 / 131 ms** |
+| Whole product incl. one Bedrock call, p50 / p95 | 60.6 / 86.7 s | **2.6 / 3.3 s** |
+| 10-digit accuracy | 36.7% | 37.4% |
+
+The accuracy gap is run-to-run noise (same final code on 300 of 332 products), not a GPU advantage.
+The point is the shape: a calibrated decision at 72 ms is cheap enough to ask 18 times, and
+most of the 2.6 seconds is the single Bedrock call, not the walk through 18,946 codes.
+
 ## The same pattern, a different tree
 
 The pattern lives in one file, `tree_descent.py`, behind a four-method `Tree` interface. To prove
@@ -136,5 +153,9 @@ agent would have asked first.
 `README.md` has the five commands: fetch the HTS and the rulings, build the Titan index, serve
 Decider, open the demo. The demo streams every Decider fork as it happens and can replay recorded
 evaluation runs without a GPU.
+
+- **Demo (recorded runs, 392 real classifications):** https://main.d3o5ktn9yc15oj.amplifyapp.com/
+- **Code and the reusable pattern:** github.com/mahanteshimath/AWS-Strands-Decider-Hackathon, `PATTERN.md`
+- **Video (2 minutes):** VIDEO_URL_HERE
 
 *Decision support, not legal advice: a licensed customs broker is responsible for every entry.*

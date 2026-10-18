@@ -73,8 +73,33 @@ so it was dropped.
 - Decider calls per product: 18.4, of which 14.6 explore a wrong turn and are abandoned by the
   best-first search. "None of these" is what makes those branches cheap to leave.
 - Decider latency on CPU: 2.97 s per call; 60.7 s per product (p50), 86.7 s (p95), with two
-  products in flight on one c7i.4xlarge. GPU latency was not measured: the account's GPU quota was
-  0 throughout, and the quota request was still open.
+  products in flight on one c7i.4xlarge. The GPU numbers are in the next section.
+
+## GPU replication and latency (added after the quota was approved)
+
+After the frozen test run, the account's GPU quota was approved. The **whole test split was run
+again, unchanged, on a g6.xlarge (NVIDIA L4)** with one product in flight at a time
+(`eval/results/latency/gpu_l4/`, summarised by `eval/latency_report.py`). Nothing was tuned between
+the two runs; this is a replication, not a new test.
+
+| | CPU (c7i.4xlarge, frozen run) | GPU (g6.xlarge, L4) |
+|---|---|---|
+| 10-digit accuracy | 36.7% | **37.4%** |
+| 4-digit accuracy | 57.5% | 57.8% |
+| Invented codes | 0% | 0% |
+| Decider calls per product | 18.4 | 18.3 |
+| **Decider call, p50 / p95** | 2,499 / 5,144 ms | **72 / 131 ms** |
+| **Whole product (incl. one Bedrock call), p50 / p95** | 60.6 / 86.7 s | **2.6 / 3.3 s** |
+| Bedrock tokens per product | 1,258 | 1,265 |
+
+- Same final code on 300 of 332 products, same Decider top code on 317 of 332. The 0.6-point
+  accuracy difference is within run-to-run variation (GPU kernels are not bit-identical to CPU, and
+  the Bedrock call is not deterministic); it is not evidence that the GPU is more accurate.
+- The CPU row above used two workers; the GPU row used one, so its latencies are not inflated by
+  contention. The headline accuracy table in this file stays the frozen CPU run.
+- At the g6.xlarge on-demand list price (about $0.80 per hour), 2.6 s per product is roughly
+  $0.0006 of GPU time. Bedrock is the larger cost.
+
 - The correct code is among Decider's top 3 complete paths 39.2% of the time. Adding the
   nearest-ruling code to the Bedrock shortlist raised dev accuracy from 31.7% to 36.7%.
 

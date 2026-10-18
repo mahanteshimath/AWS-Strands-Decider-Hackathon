@@ -65,6 +65,11 @@ only the agent got right (exact McNemar p = 1.3 × 10⁻⁷). It uses 7.8× fewe
 invents no codes. For scale, the ATLAS benchmark (arXiv 2509.18400) reports 25% at 10 digits
 for GPT-5-Thinking on a different HTS test set.
 
+**Latency (measured):** the frozen run used a CPU host (2.5 s per Decider call, 61 s per product).
+Re-running the same 332 products on a g6.xlarge GPU (NVIDIA L4) gave **72 ms per Decider call and
+2.6 s per product (p50), 3.3 s (p95)**, with the same accuracy within noise (37.4% vs 36.7%).
+Details: [`eval/RESULTS.md`](eval/RESULTS.md#gpu-replication-and-latency-added-after-the-quota-was-approved).
+
 **Second domain, same pattern code:** routing requests to 1 of 48 tools across 8 services was
 23 of 24 correct. All 17 requests it was confident about were right, and the one miss was held
 for the user ([`examples/tool_catalog/RESULTS.md`](examples/tool_catalog/RESULTS.md)).
