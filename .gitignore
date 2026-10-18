@@ -35,3 +35,5 @@ video/*/CLAUDE.md
 # Local tool state and server logs
 .impeccable/
 .uvicorn.*
+.shots/
+PRODUCT.md
