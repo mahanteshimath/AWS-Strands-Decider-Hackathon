@@ -91,10 +91,10 @@ def index() -> FileResponse:
     return FileResponse(STATIC / "index.html")
 
 
-@app.get("/static/{name}")
+@app.get("/static/{name:path}")
 def static(name: str) -> FileResponse:
     path = (STATIC / name).resolve()
-    if path.parent != STATIC.resolve() or not path.exists():
+    if STATIC.resolve() not in path.parents or not path.is_file():
         raise HTTPException(404)
     return FileResponse(path)
 

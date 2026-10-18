@@ -3,51 +3,135 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#081a44">
   <title>TariffTrail: watch Strands Decider classify a product</title>
+  <link rel="preload" href="/static/fonts/overpass.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/static/fonts/overpass-mono.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-  <header class="masthead">
-    <div class="brand">
-      <span class="mark" aria-hidden="true">&#9638;</span>
-      <div>
-        <h1>TariffTrail</h1>
-        <p class="tagline">One calibrated decision at a time, from 18,946 US tariff codes to the right one.</p>
+  <a class="skip" href="#map">Skip to the route map</a>
+
+  <div class="app">
+    <aside class="rail" aria-label="Controls">
+      <header class="brand">
+        <svg class="roundel" viewBox="0 0 48 48" width="48" height="48" aria-hidden="true">
+          <circle cx="24" cy="24" r="20" fill="none" stroke="currentColor" stroke-width="5"/>
+          <path d="M4 24h12l8-9h24M16 24l8 9h24" fill="none" stroke="var(--signal)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <div>
+          <h1>TariffTrail</h1>
+          <p class="tagline">One calibrated decision at a time, from 18,946 US tariff codes to the right one.</p>
+        </div>
+      </header>
+
+      <div class="status" id="status" role="status"><span class="lamp" aria-hidden="true"></span><span id="status-text">checking Decider&hellip;</span></div>
+
+      <section class="ctl" aria-labelledby="describe-h">
+        <h2 id="describe-h">Describe the product</h2>
+        <textarea id="facts" rows="6" maxlength="4000" aria-labelledby="describe-h"
+          placeholder="What it is, materials with percentages, how it is made, who it is for, what it does"></textarea>
+        <div class="samples" id="samples" role="group" aria-label="Sample products"></div>
+        <button id="go" class="primary" type="button">Classify live</button>
+      </section>
+
+      <section class="ctl" aria-labelledby="replay-h">
+        <h2 id="replay-h">Or replay a recorded run</h2>
+        <p class="note">Real runs from the evaluation on 2026 CBP rulings, replayed from the result files.</p>
+        <div class="replay-row">
+          <select id="replays" aria-labelledby="replay-h"></select>
+          <button id="play" type="button">Replay</button>
+        </div>
+      </section>
+
+      <section class="bench" aria-labelledby="bench-h">
+        <h2 id="bench-h">How it scores</h2>
+        <p class="note">Exact 10-digit code, 332 held-out 2026 CBP rulings.</p>
+        <ul class="bars">
+          <li class="us" style="--v:36.7"><span class="who">TariffTrail</span><span class="track"><i></i></span><b>36.7%</b><small>0% invalid codes</small></li>
+          <li style="--v:24.4"><span class="who">Nearest past rulings</span><span class="track"><i></i></span><b>24.4%</b><small>0% invalid codes</small></li>
+          <li style="--v:19"><span class="who">LLM agent with search tools</span><span class="track"><i></i></span><b>19.0%</b><small>19.0% invalid codes</small></li>
+          <li style="--v:0.3"><span class="who">LLM answering directly</span><span class="track"><i></i></span><b>0.3%</b><small>90.7% invalid codes</small></li>
+        </ul>
+      </section>
+
+      <footer class="foot">
+        <span id="release"></span>
+        <a href="https://github.com/mahanteshimath/AWS-Strands-Decider-Hackathon">Code and reusable pattern (Apache-2.0)</a>
+        <span>Decision support, not legal advice: a licensed customs broker is responsible for the entry.</span>
+      </footer>
+    </aside>
+
+    <main class="stage">
+      <div class="stage-bar">
+        <p class="recorded" id="recorded" hidden></p>
+        <p class="ticker" id="ticker">Ready</p>
+        <ul class="key" aria-label="Map key">
+          <li><i class="k-route"></i>chosen route</li>
+          <li><i class="k-none"></i>none of these</li>
+        </ul>
+        <button id="fit" class="quiet" type="button" aria-pressed="false">Fit route</button>
       </div>
-    </div>
-    <div class="status" id="status" role="status">checking Decider&hellip;</div>
-  </header>
 
-  <main class="layout">
-    <section class="panel input-panel" aria-labelledby="describe-h">
-      <h2 id="describe-h">Describe the product</h2>
-      <textarea id="facts" rows="7" maxlength="4000"
-        placeholder="What it is, materials with percentages, how it is made, who it is for, what it does"></textarea>
-      <div class="samples" id="samples" aria-label="Sample products"></div>
-      <button id="go" class="primary" type="button">Classify live</button>
-
-      <h2 id="replay-h" class="replay-h">Or replay a recorded run</h2>
-      <p class="note">Real runs from the evaluation on 2026 CBP rulings, replayed from the result files.</p>
-      <select id="replays" aria-labelledby="replay-h"></select>
-      <button id="play" type="button">Replay</button>
-    </section>
-
-    <section class="panel trail-panel" aria-labelledby="trail-h">
-      <div class="trail-head">
-        <h2 id="trail-h">The trail</h2>
-        <span class="legend"><span class="sw chosen"></span>chosen <span class="sw none"></span>none of these</span>
+      <div class="map" id="map" tabindex="0" role="region"
+           aria-label="Route map of Decider forks. Scroll or drag to pan.">
+        <div class="canvas" id="canvas">
+          <svg class="wires" id="wires" aria-hidden="true"></svg>
+          <div class="marks" id="marks"></div>
+        </div>
+        <div class="empty" id="empty">
+          <svg class="ghost" viewBox="0 0 900 360" aria-hidden="true" preserveAspectRatio="xMaxYMid meet">
+            <g fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M30 180H250L300 130H520L570 180H870"/>
+              <path d="M300 130L350 80H520" opacity=".5"/>
+              <path d="M570 180L620 230H760" opacity=".5"/>
+              <path d="M250 180L300 230H430" opacity=".5"/>
+            </g>
+            <g fill="var(--enamel)" stroke="currentColor" stroke-width="4">
+              <circle cx="250" cy="180" r="13"/><circle cx="570" cy="180" r="13"/><circle cx="870" cy="180" r="13"/>
+            </g>
+          </svg>
+          <div class="empty-copy">
+            <h2>Your route appears here.</h2>
+            <p>Describe a product, or replay a recorded run. Each junction is one Decider call. Each branch is an option, drawn as long as it is likely.</p>
+            <dl class="scale">
+              <div><dt>sections</dt><dd>22</dd></div>
+              <div><dt>chapters</dt><dd>98</dd></div>
+              <div><dt>decisions</dt><dd>11,516</dd></div>
+              <div><dt>codes</dt><dd>18,946</dd></div>
+            </dl>
+          </div>
+        </div>
       </div>
-      <p class="recorded" id="recorded" hidden></p>
-      <ol class="trail" id="trail" aria-live="polite"></ol>
-      <div class="result" id="result" hidden></div>
-    </section>
-  </main>
 
-  <footer class="foot">
-    <span id="release"></span>
-    <span><a href="https://github.com/mahanteshimath/AWS-Strands-Decider-Hackathon">Code and reusable pattern (Apache-2.0)</a></span>
-    <span>Decision support, not legal advice: a licensed customs broker is responsible for the entry.</span>
-  </footer>
+      <ol class="sr" id="sr-trail" aria-live="polite" aria-label="Decider forks so far"></ol>
+
+      <section class="board" id="board" aria-labelledby="board-h">
+        <div class="dest">
+          <h2 id="board-h">Destination</h2>
+          <div class="digits idle" id="code" role="img" aria-label="No tariff code yet">
+            <span class="dg">-</span><span class="dg">-</span><span class="dg">-</span><span class="dg">-</span><span class="sep">.</span><span class="dg">-</span><span class="dg">-</span><span class="sep">.</span><span class="dg">-</span><span class="dg">-</span><span class="sep">.</span><span class="dg">-</span><span class="dg">-</span>
+          </div>
+          <p class="gold" id="gold" hidden></p>
+        </div>
+
+        <div class="tier" id="tier">
+          <p class="sign idle" id="sign">Awaiting a run</p>
+          <p class="tier-note" id="tier-note">TariffTrail never auto-files a tariff code. Every result goes to a licensed broker.</p>
+        </div>
+
+        <ul class="sources" id="sources" aria-label="Where the answer came from" hidden></ul>
+
+        <dl class="metrics" id="metrics" hidden></dl>
+
+        <div class="detail" id="detail" hidden>
+          <ol class="chain" id="chain"></ol>
+          <p class="why" id="why"></p>
+        </div>
+      </section>
+    </main>
+  </div>
 
   <script src="/static/app.js"></script>
 </body>
