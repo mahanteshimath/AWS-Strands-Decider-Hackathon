@@ -1,0 +1,9 @@
+{
+ "hts_release": "2026HTSRev21",
+ "seed": 20261018,
+ "selected": 1038,
+ "sampled": 400,
+ "dev": 60,
+ "test": 332,
+ "rejected": 8
+}

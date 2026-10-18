@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+*.egg-info/
+.pytest_cache/
+
+# Large or regenerable downloads (fetch scripts recreate them)
+data/raw/
+# Titan embeddings of past rulings (~21 MB): python -m tariff_trail.precedents build
+data/precedents/
+# Simulated customs entries written by the demo agent's file_entry tool
+data/entries.jsonl
+
+# Video build intermediates (the published video lives on the hosting platform)
+video/**/node_modules/
+video/**/renders/
+video/**/.hyperframes/
+
+# Local tooling state
+.snowflake/
+.env
+*.log

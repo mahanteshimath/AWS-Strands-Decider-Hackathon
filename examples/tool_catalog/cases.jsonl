@@ -1,0 +1,24 @@
+{"request": "Ping Priya privately that the build is green", "gold": "slack/send_direct_message"}
+{"request": "Let everyone in #release know v2.4 ships tonight", "gold": "slack/post_channel_message"}
+{"request": "Open a PR from feature/login into main", "gold": "github/create_pull_request"}
+{"request": "The nightly CI run failed on a flaky test, kick it off again", "gold": "github/rerun_workflow"}
+{"request": "Where in our repos do we still call the deprecated parse_v1 function?", "gold": "github/search_code"}
+{"request": "Approve Dmitri's pull request 482, it looks good", "gold": "github/review_pull_request"}
+{"request": "Move PAY-311 to Done", "gold": "jira/transition_ticket"}
+{"request": "Show me all open bugs assigned to me in the payments project", "gold": "jira/query_tickets"}
+{"request": "Log a bug: checkout button unresponsive on Safari", "gold": "jira/create_ticket"}
+{"request": "Pull PAY-299 and PAY-300 into this sprint", "gold": "jira/add_to_sprint"}
+{"request": "When are Ana, Raj and I all free for an hour this week?", "gold": "calendar/find_free_slot"}
+{"request": "Push tomorrow's design review to Friday 3pm", "gold": "calendar/reschedule_event"}
+{"request": "Grab the Everest room for 2 to 3 today", "gold": "calendar/book_room"}
+{"request": "What meetings do I have on Monday?", "gold": "calendar/list_agenda"}
+{"request": "Write back to the vendor's invoice email saying we'll pay Friday", "gold": "gmail/reply_email"}
+{"request": "Find the email from Contoso about the renewal quote", "gold": "gmail/search_email"}
+{"request": "Send this thread to legal so they can review the clause", "gold": "gmail/forward_email"}
+{"request": "Give the auditor a download link to report.pdf that expires in 24 hours", "gold": "s3/presign_url"}
+{"request": "Archive everything under logs/ after 30 days", "gold": "s3/set_lifecycle"}
+{"request": "Put q3-results.xlsx in the finance bucket", "gold": "s3/upload_object"}
+{"request": "Acme moved to negotiation, deal is now 120k", "gold": "salesforce/update_opportunity"}
+{"request": "Note that I spoke with Jordan at Globex for 20 minutes about pricing", "gold": "salesforce/log_call"}
+{"request": "Who is on call for the checkout service right now?", "gold": "pagerduty/who_is_on_call"}
+{"request": "Database latency is through the roof, page whoever is on call", "gold": "pagerduty/trigger_incident"}

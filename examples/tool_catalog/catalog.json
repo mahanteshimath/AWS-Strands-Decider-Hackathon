@@ -1,0 +1,69 @@
+{
+  "name": "tools",
+  "children": [
+    {"name": "github", "description": "source code hosting: repositories, pull requests, issues, code review, CI workflows", "children": [
+      {"name": "create_pull_request", "description": "open a new pull request from a branch into a base branch"},
+      {"name": "merge_pull_request", "description": "merge an approved pull request"},
+      {"name": "review_pull_request", "description": "leave a review (approve, request changes, comment) on a pull request"},
+      {"name": "create_issue", "description": "file a new issue in a repository"},
+      {"name": "search_code", "description": "search source code across repositories for a string or symbol"},
+      {"name": "rerun_workflow", "description": "re-run a failed GitHub Actions workflow run"}
+    ]},
+    {"name": "slack", "description": "team chat: channels, direct messages, reactions, status", "children": [
+      {"name": "post_channel_message", "description": "post a message to a channel such as #general or #release"},
+      {"name": "send_direct_message", "description": "send a private direct message to one person"},
+      {"name": "add_reaction", "description": "add an emoji reaction to an existing message"},
+      {"name": "set_status", "description": "set your own Slack status text and emoji"},
+      {"name": "search_messages", "description": "search past Slack messages by keyword, person or channel"},
+      {"name": "create_channel", "description": "create a new public or private channel"}
+    ]},
+    {"name": "jira", "description": "project tracking: tickets, sprints, boards, story points", "children": [
+      {"name": "create_ticket", "description": "create a Jira ticket (story, task, bug) in a project"},
+      {"name": "transition_ticket", "description": "move a ticket to another status, e.g. In Progress or Done"},
+      {"name": "assign_ticket", "description": "assign a ticket to a person"},
+      {"name": "add_to_sprint", "description": "add tickets to the current or a named sprint"},
+      {"name": "comment_ticket", "description": "add a comment to a ticket"},
+      {"name": "query_tickets", "description": "find tickets with a JQL query, e.g. open bugs assigned to me"}
+    ]},
+    {"name": "calendar", "description": "scheduling: meetings, availability, rooms, reminders", "children": [
+      {"name": "create_event", "description": "schedule a meeting or event with attendees at a time"},
+      {"name": "find_free_slot", "description": "find a time when all given people are free"},
+      {"name": "reschedule_event", "description": "move an existing meeting to a new time"},
+      {"name": "cancel_event", "description": "cancel an existing meeting and notify attendees"},
+      {"name": "book_room", "description": "reserve a meeting room for a time slot"},
+      {"name": "list_agenda", "description": "list the meetings on a given day"}
+    ]},
+    {"name": "gmail", "description": "email: send, reply, search, labels, drafts", "children": [
+      {"name": "send_email", "description": "compose and send a new email to recipients"},
+      {"name": "reply_email", "description": "reply to an existing email thread"},
+      {"name": "search_email", "description": "search the mailbox by sender, subject or words"},
+      {"name": "create_draft", "description": "save an email as a draft without sending"},
+      {"name": "apply_label", "description": "apply a label to matching emails"},
+      {"name": "forward_email", "description": "forward an existing email to someone else"}
+    ]},
+    {"name": "s3", "description": "Amazon S3 object storage: buckets, objects, sharing links, lifecycle", "children": [
+      {"name": "upload_object", "description": "upload a local file to a bucket"},
+      {"name": "download_object", "description": "download an object from a bucket to local disk"},
+      {"name": "presign_url", "description": "create a time-limited download link for an object"},
+      {"name": "list_objects", "description": "list objects in a bucket under a prefix"},
+      {"name": "delete_object", "description": "delete an object from a bucket"},
+      {"name": "set_lifecycle", "description": "set a lifecycle rule, e.g. expire or archive objects after N days"}
+    ]},
+    {"name": "salesforce", "description": "CRM: accounts, contacts, opportunities, sales pipeline", "children": [
+      {"name": "create_lead", "description": "create a new sales lead"},
+      {"name": "update_opportunity", "description": "change an opportunity's stage, amount or close date"},
+      {"name": "log_call", "description": "log a call or activity against a contact"},
+      {"name": "find_account", "description": "look up a customer account and its details"},
+      {"name": "pipeline_report", "description": "summarise the sales pipeline by stage for a period"},
+      {"name": "create_contact", "description": "add a new contact to an account"}
+    ]},
+    {"name": "pagerduty", "description": "incident response: on-call, incidents, escalation", "children": [
+      {"name": "trigger_incident", "description": "open a new incident and page the on-call engineer"},
+      {"name": "acknowledge_incident", "description": "acknowledge an open incident"},
+      {"name": "resolve_incident", "description": "mark an incident resolved"},
+      {"name": "who_is_on_call", "description": "show who is on call for a service right now"},
+      {"name": "escalate_incident", "description": "escalate an incident to the next level"},
+      {"name": "add_incident_note", "description": "add a timeline note to an incident"}
+    ]}
+  ]
+}

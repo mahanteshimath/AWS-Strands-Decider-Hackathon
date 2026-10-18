@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="snowflake-source" content="cortex-agent-authored">
+  <title>TariffTrail: watch Strands Decider classify a product</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header class="masthead">
+    <div class="brand">
+      <span class="mark" aria-hidden="true">&#9638;</span>
+      <div>
+        <h1>TariffTrail</h1>
+        <p class="tagline">One calibrated decision at a time, from 18,946 US tariff codes to the right one.</p>
+      </div>
+    </div>
+    <div class="status" id="status" role="status">checking Decider&hellip;</div>
+  </header>
+
+  <main class="layout">
+    <section class="panel input-panel" aria-labelledby="describe-h">
+      <h2 id="describe-h">Describe the product</h2>
+      <textarea id="facts" rows="7" maxlength="4000"
+        placeholder="What it is, materials with percentages, how it is made, who it is for, what it does"></textarea>
+      <div class="samples" id="samples" aria-label="Sample products"></div>
+      <button id="go" class="primary" type="button">Classify live</button>
+
+      <h2 id="replay-h" class="replay-h">Or replay a recorded run</h2>
+      <p class="note">Real runs from the evaluation on 2026 CBP rulings, replayed from the result files.</p>
+      <select id="replays" aria-labelledby="replay-h"></select>
+      <button id="play" type="button">Replay</button>
+    </section>
+
+    <section class="panel trail-panel" aria-labelledby="trail-h">
+      <div class="trail-head">
+        <h2 id="trail-h">The trail</h2>
+        <span class="legend"><span class="sw chosen"></span>chosen <span class="sw none"></span>none of these</span>
+      </div>
+      <p class="recorded" id="recorded" hidden></p>
+      <ol class="trail" id="trail" aria-live="polite"></ol>
+      <div class="result" id="result" hidden></div>
+    </section>
+  </main>
+
+  <footer class="foot">
+    <span id="release"></span>
+    <span>Decision support, not legal advice: a licensed customs broker is responsible for the entry.</span>
+  </footer>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

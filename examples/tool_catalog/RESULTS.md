@@ -1,0 +1,38 @@
+# Tool-catalog example: measured run
+
+Run on 2026-10-18 on the CPU Decider host (c7i.4xlarge, Strands Decider 2B
+`strands-decider-2B-qwen3.5-v1-2610`), sharing the server with a concurrent evaluation run.
+Same `CalibratedTreeDescent` class as TariffTrail; only the tree (`catalog.json`, 8 services,
+48 tools) and the question wording differ. Auto-call threshold p >= 0.6. No LLM is used.
+
+```
+ok  p=0.49 ask   slack/send_direct_message        <- Ping Priya privately that the build is green
+ok  p=0.66 auto  slack/post_channel_message       <- Let everyone in #release know v2.4 ships tonight
+ok  p=0.93 auto  github/create_pull_request       <- Open a PR from feature/login into main
+ok  p=0.81 auto  github/rerun_workflow            <- The nightly CI run failed on a flaky test, kick it off again
+ok  p=0.88 auto  github/search_code               <- Where in our repos do we still call the deprecated parse_v1 function?
+XX  p=0.57 ask   github/merge_pull_request        <- Approve Dmitri's pull request 482, it looks good
+ok  p=0.72 auto  jira/transition_ticket           <- Move PAY-311 to Done
+ok  p=0.73 auto  jira/query_tickets               <- Show me all open bugs assigned to me in the payments project
+ok  p=0.68 auto  jira/create_ticket               <- Log a bug: checkout button unresponsive on Safari
+ok  p=0.71 auto  jira/add_to_sprint               <- Pull PAY-299 and PAY-300 into this sprint
+ok  p=0.96 auto  calendar/find_free_slot          <- When are Ana, Raj and I all free for an hour this week?
+ok  p=0.38 ask   calendar/reschedule_event        <- Push tomorrow's design review to Friday 3pm
+ok  p=0.90 auto  calendar/book_room               <- Grab the Everest room for 2 to 3 today
+ok  p=0.97 auto  calendar/list_agenda             <- What meetings do I have on Monday?
+ok  p=0.78 auto  gmail/reply_email                <- Write back to the vendor's invoice email saying we'll pay Friday
+ok  p=0.56 ask   gmail/search_email               <- Find the email from Contoso about the renewal quote
+ok  p=0.52 ask   gmail/forward_email              <- Send this thread to legal so they can review the clause
+ok  p=0.81 auto  s3/presign_url                   <- Give the auditor a download link to report.pdf that expires in 24 hours
+ok  p=0.94 auto  s3/set_lifecycle                 <- Archive everything under logs/ after 30 days
+ok  p=0.78 auto  s3/upload_object                 <- Put q3-results.xlsx in the finance bucket
+ok  p=0.69 auto  salesforce/update_opportunity    <- Acme moved to negotiation, deal is now 120k
+ok  p=0.30 ask   salesforce/log_call              <- Note that I spoke with Jordan at Globex for 20 minutes about pricing
+ok  p=0.86 auto  pagerduty/who_is_on_call         <- Who is on call for the checkout service right now?
+ok  p=0.50 ask   pagerduty/trigger_incident       <- Database latency is through the roof, page whoever is on call
+
+accuracy 23/24 = 96%; auto (p >= 0.6) 17/24, of which correct 17/17; 6.6 s per request on this host
+```
+
+The one miss ("approve" routed to merge instead of review) had p = 0.57, below the bar, so the
+agent would have asked before acting. 24 hand-written requests is a demonstration, not a benchmark.
