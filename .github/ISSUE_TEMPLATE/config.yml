@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Report a security issue privately
+    url: https://github.com/mahanteshimath/AWS-Strands-Decider-Hackathon/security/advisories/new
+    about: Please do not file vulnerabilities as public issues.
+  - name: Read the reusable pattern first
+    url: https://github.com/mahanteshimath/AWS-Strands-Decider-Hackathon/blob/main/PATTERN.md
+    about: How Calibrated Tree Descent works and how to tune it for your own tree.

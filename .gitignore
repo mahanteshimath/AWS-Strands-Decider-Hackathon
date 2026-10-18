@@ -31,3 +31,7 @@ video/*/renders/
 video/*/assets/voice/*.wav
 video/*/AGENTS.md
 video/*/CLAUDE.md
+
+# Local tool state and server logs
+.impeccable/
+.uvicorn.*

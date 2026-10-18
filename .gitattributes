@@ -3,3 +3,4 @@
 # Keep data and result files byte-identical across platforms.
 *.jsonl text eol=lf
 *.json text eol=lf
+*.drawio text eol=lf
