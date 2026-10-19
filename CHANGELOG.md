@@ -12,6 +12,11 @@ All notable changes to this project are documented here. The format follows
 - Post-hoc ablation (`eval/ablation.py`, `eval/ABLATION.md`): which shortlist source finds the answer, re-run noise, and
   a wider exploratory shortlist.
 - Cost per 1,000 products at list price, and charts for the README and article (`eval/charts.py`, `docs/images/`).
+- `notebooks/try_tarifftrail.ipynb`: Strands Decider 2B live on a free Colab GPU with no AWS account (tool routing,
+  re-running any evaluation ruling from its precomputed retrieval seed in `data/eval/seeds.jsonl`, your own product;
+  the full system when AWS credentials are present).
+- Release `precedents-v1` with the prebuilt Titan index of 7,024 pre-2026 rulings, and `data/fetch_precedents.py`
+  (SHA-256 checked), so the full system runs without rebuilding the index.
 - Architecture diagrams as editable draw.io files (`docs/architecture/`): system overview, Calibrated Tree Descent on a
   real trace, `ClassificationGate` flow, and the AWS deployment.
 - Open-source community files: `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `SECURITY.md`, `CITATION.cff`, issue and pull

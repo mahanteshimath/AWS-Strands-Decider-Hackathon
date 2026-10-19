@@ -216,6 +216,8 @@ Decider, open the demo. The demo streams every Decider fork as it happens and ca
 evaluation runs without a GPU. Every number in this article is regenerated from committed result
 files by `eval/report.py`, `eval/ablation.py` and `eval/charts.py`.
 
+- **Run Decider yourself on a free Colab GPU, no AWS account:** `notebooks/try_tarifftrail.ipynb` (tool routing,
+  any of the 392 evaluation rulings re-run live, and your own product)
 - **Demo (recorded runs, 392 real classifications):** https://main.d3o5ktn9yc15oj.amplifyapp.com/
 - **Code and the reusable pattern:** github.com/mahanteshimath/AWS-Strands-Decider-Hackathon, `PATTERN.md`
 - **The pattern in a Strands agent:** `examples/tool_catalog/agent.py`

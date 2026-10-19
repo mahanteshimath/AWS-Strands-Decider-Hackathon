@@ -12,9 +12,11 @@ Amazon Bedrock call choosing among *real* codes. It cannot invent a code, and it
 [![CI](https://github.com/mahanteshimath/AWS-Strands-Decider-Hackathon/actions/workflows/ci.yml/badge.svg)](https://github.com/mahanteshimath/AWS-Strands-Decider-Hackathon/actions/workflows/ci.yml)
 [![Strands Decider 2B](https://img.shields.io/badge/Strands-Decider%202B-6f42c1.svg)](PATTERN.md)
 [![Amazon Bedrock](https://img.shields.io/badge/Amazon-Bedrock-01A88D.svg)](tariff_trail/adjudicator.py)
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/mahanteshimath/AWS-Strands-Decider-Hackathon/blob/main/notebooks/try_tarifftrail.ipynb)
 [![Hackathon](https://img.shields.io/badge/AWS%20Builder%20Center-Strands%20Decider-ff9900.svg)](#hackathon)
 
 **[Live demo](https://main.d3o5ktn9yc15oj.amplifyapp.com/)** ·
+**[Run it on a free GPU](https://colab.research.google.com/github/mahanteshimath/AWS-Strands-Decider-Hackathon/blob/main/notebooks/try_tarifftrail.ipynb)** ·
 **[The reusable pattern](PATTERN.md)** ·
 **[Architecture](#architecture)** ·
 **[Results](#results)** ·
@@ -168,7 +170,18 @@ whose tool calls go through the gate ([`examples/tool_catalog/README.md`](exampl
 
 ## Quickstart
 
-Requires Python 3.11+. The first path needs no GPU and no AWS account.
+Requires Python 3.11+. The first two paths need no AWS account.
+
+### 0. Run Strands Decider in your browser (free Colab GPU, no AWS)
+
+[`notebooks/try_tarifftrail.ipynb`](notebooks/try_tarifftrail.ipynb) installs Strands Decider 2B on a free T4 and runs
+the pattern live: routing requests across the 48-tool catalog, re-running the exact seeded search for any of the 392
+evaluation rulings (their retrieval seeds are precomputed in [`data/eval/seeds.jsonl`](data/eval/seeds.jsonl)), and
+classifying your own product. Add AWS credentials as Colab secrets and the last cell runs the full system, with the
+prebuilt Titan index from the [release](https://github.com/mahanteshimath/AWS-Strands-Decider-Hackathon/releases/tag/precedents-v1)
+and one Bedrock call.
+
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/mahanteshimath/AWS-Strands-Decider-Hackathon/blob/main/notebooks/try_tarifftrail.ipynb)
 
 ### 1. Watch recorded runs locally (no GPU, no AWS)
 
@@ -197,12 +210,14 @@ uv run pytest      # 17 tests; the ones that need the HTS data skip until you ru
 ### 3. Classify live (needs Strands Decider 2B and AWS Bedrock)
 
 ```bash
-python data/fetch_cross.py                                    # CBP rulings from CROSS (public domain)
-AWS_PROFILE=... python -m tariff_trail.precedents build       # Titan embeddings of pre-2026 rulings
+python data/fetch_precedents.py                               # prebuilt Titan index of 7,024 pre-2026 rulings (release asset)
 strands-decider serve StrandsAgents/strands-decider-2B-qwen3.5-v1-2610 --port 8099
 uv run uvicorn tariff_trail.web.app:app --port 8000           # the demo now offers "Classify live"
 uv run python -m tariff_trail.agent "Classify and file: women's knitted pullover, 44% polyamide ..."
 ```
+
+To rebuild the index yourself instead: `python data/fetch_cross.py` (CBP rulings from CROSS, public domain), then
+`AWS_PROFILE=... python -m tariff_trail.precedents build` (Titan embeddings).
 
 Decider runs on a GPU (an NVIDIA L4 gives ~72 ms per call) or on CPU, just much more slowly. [`infra/`](infra/)
 contains the AWS setup actually used: an SSM-only EC2 host with no inbound ports, an IAM instance role for Bedrock,
@@ -292,6 +307,7 @@ the tables above with no model access.
 | [`tariff_trail/agent.py`](tariff_trail/agent.py) | The Strands agent: classify, look up duty, list lines, file entry |
 | [`tariff_trail/web/`](tariff_trail/web) | Demo UI (FastAPI + Server-Sent Events) |
 | [`examples/tool_catalog/`](examples/tool_catalog) | The same pattern routing 48 tools, on its own and as a gated Strands agent |
+| [`notebooks/`](notebooks) | Run Decider live on a free Colab GPU: tool routing, real rulings, your own product |
 | [`eval/`](eval) · [`data/`](data) | Runner, reports, ablation, charts, traces, results · fetchers and the leak-checked eval builder |
 | [`infra/`](infra) | SSM-only EC2, IAM, S3, budget alert, Amplify deploy |
 | [`docs/architecture/`](docs/architecture) | The draw.io sources and exported diagrams |
