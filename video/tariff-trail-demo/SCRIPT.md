@@ -56,16 +56,16 @@ say: On three hundred thirty two held-out rulings, TariffTrail got thirty seven 
 show: Bar chart: TariffTrail 36.7%, Decider alone 25.3%, nearest ruling 24.4%, LLM agent 19.0%, LLM direct 0.3%. Small print: p = 1.3e-7 vs agent.
 
 ## L14 · cost
-say: With zero invented codes, and nearly eight times fewer Bedrock tokens than the agent.
-show: 0% invented vs 19%; tokens per product 1,258 vs 9,789.
+say: With zero invented codes, at a fifth of the agent's cost: one dollar seventy three per thousand products.
+show: 0% invented vs 19%; cost per 1,000 products $1.73 vs $8.93 (Bedrock tokens + GPU time at list price).
 
 ## L15 · honesty
 say: One idea did not hold up. Decider's confidence was not reliable enough to file a customs entry alone, so every filing goes to a broker, and when three sources agree, it is fast-tracked. Three in four of those are right.
 show: Calibration bars, then two queues: FAST-TRACK 16% at 76% correct, FULL REVIEW 29%.
 
 ## L16 · reuse
-say: The pattern is one file. Pointed at forty eight tools, it routed twenty three of twenty four requests, and the one miss asked first.
-show: tree_descent.py card; tool catalog tree; 23/24, 17/17 auto-called correct.
+say: The pattern is one file, plus a Strands gate. Pointed at forty eight tools, it routed twenty three of twenty four requests, and when it was unsure, the gate paused the agent for a person.
+show: tree_descent.py + strands_kit.py card; tool catalog 23/24; a gated Strands agent: p = 0.38, Confirm, paused for a person.
 
 ## L17 · close
 say: TariffTrail. Choose among a handful, many times, and know when to ask. The code is open source.

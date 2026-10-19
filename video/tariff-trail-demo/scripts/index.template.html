@@ -189,6 +189,7 @@
       #s12-uses { position: absolute; left: 640px; right: 0; top: 40px; display: grid; grid-template-columns: 1fr 1fr; gap: 30px; }
       .use { padding: 32px 34px; } .use .un { font: 700 24px "JetBrains Mono", monospace; color: var(--orange); letter-spacing: 0.08em; text-transform: uppercase; }
       .use .uv { font: 800 84px/1.05 "JetBrains Mono", monospace; margin-top: 14px; } .use .ud { font-size: 27px; color: var(--muted); margin-top: 12px; line-height: 1.4; }
+.use.gated { grid-column: 1 / -1; } .use.gated .uv { font-size: 64px; color: var(--orange); }
       #s12-close { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 26px;
                    background: var(--bg); }
       #s12-logo { font: 800 132px/1 "Inter", sans-serif; letter-spacing: -0.03em; }
@@ -361,7 +362,7 @@ __TICKETS__
           </div>
           <div data-hf-id="hf-tykn" id="s10-tiles">
             <div data-hf-id="hf-i4dk" class="card tilebig"><div data-hf-id="hf-xnuh" class="tv">0%</div><div data-hf-id="hf-lo4j" class="tl">invented codes</div><div data-hf-id="hf-z7re" class="tc">LLM agent 19.0% · LLM direct 90.7%</div></div>
-            <div data-hf-id="hf-ymqo" class="card tilebig"><div data-hf-id="hf-ukf6" class="tv">7.8×</div><div data-hf-id="hf-59k4" class="tl">fewer Bedrock tokens than the agent</div><div data-hf-id="hf-kaxr" class="tc">1,258 vs 9,789 per product · McNemar p = 1.3e-7</div></div>
+            <div data-hf-id="hf-ymqo" class="card tilebig"><div data-hf-id="hf-ukf6" class="tv">$1.73</div><div data-hf-id="hf-59k4" class="tl">per 1,000 products · the agent: $8.93</div><div data-hf-id="hf-kaxr" class="tc">Bedrock tokens + GPU time, list price · 1,258 vs 9,789 tokens</div></div>
           </div>
         </div>
       </section>
@@ -387,11 +388,14 @@ __TICKETS__
         <div data-hf-id="hf-haxh" class="stage">
           <div data-hf-id="hf-s73h" id="s12-file" class="card">
             <div data-hf-id="hf-9arz" class="file-n">tree_descent.py</div>
-            <div data-hf-id="hf-fk2f" class="file-d">one file · a 4-method Tree protocol · seed, shortlist and missing-fact hooks · Apache-2.0</div>
+            <div data-hf-id="hf-fk2f" class="file-d">one standard-library file · any tree · seed, shortlist and missing-fact hooks</div>
+            <div data-hf-id="hf-k1t9" class="file-n" style="margin-top: 30px;">strands_kit.py</div>
+            <div data-hf-id="hf-k2t9" class="file-d">a decision tool + a gate for any Strands agent · Deny · Guide · Confirm · Apache-2.0</div>
           </div>
           <div data-hf-id="hf-6qpu" id="s12-uses">
             <div data-hf-id="hf-3xyj" class="card use" id="u1"><div data-hf-id="hf-jrha" class="un">US tariff schedule</div><div data-hf-id="hf-0fw6" class="uv">36.7%</div><div data-hf-id="hf-vah9" class="ud">exact 10-digit, 18,946 codes</div></div>
             <div data-hf-id="hf-va2o" class="card use" id="u2"><div data-hf-id="hf-qxr9" class="un">48-tool catalog</div><div data-hf-id="hf-4no5" class="uv">23/24</div><div data-hf-id="hf-appn" class="ud">17 of 17 confident calls right; the miss asked first</div></div>
+            <div data-hf-id="hf-u3g8" class="card use gated" id="u3"><div data-hf-id="hf-u3n1" class="un">Strands agent, gated</div><div data-hf-id="hf-u3v2" class="uv">p 0.38 → Confirm</div><div data-hf-id="hf-u3d3" class="ud">"Push the design review to Friday": below the 0.6 bar, so the agent paused until a person said yes</div></div>
           </div>
         </div>
         <div data-hf-id="hf-wcog" id="s12-close" data-layout-allow-occlusion="">
@@ -573,8 +577,11 @@ __AUDIO__
       {
         const t0 = S("s12-reuse");
         tl.fromTo("#s12-file", { opacity: 0, x: -30 }, { opacity: 1, x: 0, duration: 0.5, ease }, t0 + 0.1);
-        tl.fromTo("#s12-uses .use", { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 0.5, stagger: 0.6, ease }, t0 + 0.8);
+        tl.fromTo(["#u1", "#u2"], { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 0.5, stagger: 0.6, ease }, t0 + 0.8);
         const t17 = cue("s12-reuse", "L17");
+        // the gated-agent card lands on "when it was unsure, the gate paused the agent", the end of L16
+        tl.fromTo("#u3", { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 0.5, ease }, Math.max(t0 + 2.4, t17 - 4.2));
+        tl.to(["#s12-file", "#s12-uses"], { opacity: 0, duration: 0.4 }, t17 - 0.3);
         tl.fromTo("#s12-close", { opacity: 0 }, { opacity: 1, duration: 0.6 }, t17 - 0.3);
         tl.fromTo(["#s12-logo", "#s12-tag", "#s12-repo", "#s12-tags"], { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.5, stagger: 0.25, ease }, t17);
       }
