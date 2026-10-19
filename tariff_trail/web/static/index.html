@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="dark">
-  <meta name="theme-color" content="#081a44">
+  <meta name="theme-color" content="#0b2260">
   <title>TariffTrail: watch Strands Decider classify a product</title>
   <link rel="preload" href="/static/fonts/overpass.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="/static/fonts/overpass-mono.woff2" as="font" type="font/woff2" crossorigin>
@@ -30,15 +30,22 @@
 
       <section class="ctl" aria-labelledby="describe-h">
         <h2 id="describe-h">Describe the product</h2>
-        <textarea id="facts" rows="6" maxlength="4000" aria-labelledby="describe-h"
+        <textarea id="facts" rows="4" maxlength="4000" aria-labelledby="describe-h"
           placeholder="What it is, materials with percentages, how it is made, who it is for, what it does"></textarea>
-        <div class="samples" id="samples" role="group" aria-label="Sample products"></div>
-        <button id="go" class="primary" type="button">Classify live</button>
+        <div class="samples" id="samples" role="group" aria-label="Sample products">
+          <button id="fresh" class="fresh" type="button" title="Load a random real product from the 392 labelled 2026 CBP rulings">New product</button>
+        </div>
+        <p class="sample-note" id="sample-note" hidden></p>
+        <div class="go-row">
+          <button id="go" class="primary" type="button">Classify live</button>
+          <button id="sim" type="button" title="Run the real search with a local keyword stand-in for Decider">Simulate</button>
+        </div>
+        <p class="go-note" id="go-note" hidden>Decider is offline. Simulate runs the same search with a keyword stand-in for Decider, or replay a real recorded run below.</p>
       </section>
 
       <section class="ctl" aria-labelledby="replay-h">
         <h2 id="replay-h">Or replay a recorded run</h2>
-        <p class="note">Real runs from the evaluation on 2026 CBP rulings, replayed from the result files.</p>
+        <p class="note">Real runs from the evaluation on 2026 CBP rulings.</p>
         <div class="replay-row">
           <select id="replays" aria-labelledby="replay-h"></select>
           <button id="play" type="button">Replay</button>
@@ -47,12 +54,12 @@
 
       <section class="bench" aria-labelledby="bench-h">
         <h2 id="bench-h">How it scores</h2>
-        <p class="note">Exact 10-digit code, 332 held-out 2026 CBP rulings.</p>
+        <p class="note">Exact 10-digit code on 332 held-out 2026 CBP rulings.</p>
         <ul class="bars">
-          <li class="us" style="--v:36.7"><span class="who">TariffTrail</span><span class="track"><i></i></span><b>36.7%</b><small>0% invalid codes</small></li>
-          <li style="--v:24.4"><span class="who">Nearest past rulings</span><span class="track"><i></i></span><b>24.4%</b><small>0% invalid codes</small></li>
-          <li style="--v:19"><span class="who">LLM agent with search tools</span><span class="track"><i></i></span><b>19.0%</b><small>19.0% invalid codes</small></li>
-          <li style="--v:0.3"><span class="who">LLM answering directly</span><span class="track"><i></i></span><b>0.3%</b><small>90.7% invalid codes</small></li>
+          <li class="us" style="--v:36.7"><span class="who">TariffTrail</span><b>36.7%</b><span class="track"><i></i></span><small>0% invalid codes</small></li>
+          <li style="--v:24.4"><span class="who">Nearest past rulings</span><b>24.4%</b><span class="track"><i></i></span><small>0% invalid codes</small></li>
+          <li style="--v:19"><span class="who">LLM agent with search tools</span><b>19.0%</b><span class="track"><i></i></span><small>19.0% invalid codes</small></li>
+          <li style="--v:0.3"><span class="who">LLM answering directly</span><b>0.3%</b><span class="track"><i></i></span><small>90.7% invalid codes</small></li>
         </ul>
       </section>
 
@@ -65,44 +72,47 @@
 
     <main class="stage">
       <div class="stage-bar">
-        <p class="recorded" id="recorded" hidden></p>
         <p class="ticker" id="ticker">Ready</p>
-        <ul class="key" aria-label="Map key">
-          <li><i class="k-route"></i>chosen route</li>
-          <li><i class="k-none"></i>none of these</li>
-        </ul>
-        <button id="fit" class="quiet" type="button" aria-pressed="false">Fit route</button>
+        <button id="fit" class="quiet" type="button" aria-pressed="false" disabled>Fit route</button>
+        <p class="recorded" id="recorded" hidden></p>
       </div>
 
-      <div class="map" id="map" tabindex="0" role="region"
-           aria-label="Route map of Decider forks. Scroll or drag to pan.">
-        <div class="canvas" id="canvas">
-          <svg class="wires" id="wires" aria-hidden="true"></svg>
-          <div class="marks" id="marks"></div>
-        </div>
-        <div class="empty" id="empty">
-          <svg class="ghost" viewBox="0 0 900 360" aria-hidden="true" preserveAspectRatio="xMaxYMid meet">
-            <g fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M30 180H250L300 130H520L570 180H870"/>
-              <path d="M300 130L350 80H520" opacity=".5"/>
-              <path d="M570 180L620 230H760" opacity=".5"/>
-              <path d="M250 180L300 230H430" opacity=".5"/>
-            </g>
-            <g fill="var(--enamel)" stroke="currentColor" stroke-width="4">
-              <circle cx="250" cy="180" r="13"/><circle cx="570" cy="180" r="13"/><circle cx="870" cy="180" r="13"/>
-            </g>
-          </svg>
-          <div class="empty-copy">
-            <h2>Your route appears here.</h2>
-            <p>Describe a product, or replay a recorded run. Each junction is one Decider call. Each branch is an option, drawn as long as it is likely.</p>
-            <dl class="scale">
-              <div><dt>sections</dt><dd>22</dd></div>
-              <div><dt>chapters</dt><dd>98</dd></div>
-              <div><dt>decisions</dt><dd>11,516</dd></div>
-              <div><dt>codes</dt><dd>18,946</dd></div>
-            </dl>
+      <div class="mapwrap">
+        <div class="map" id="map" tabindex="0" role="region"
+             aria-label="Route map of Decider forks. Scroll or drag to pan.">
+          <div class="canvas" id="canvas">
+            <svg class="wires" id="wires" aria-hidden="true"></svg>
+            <div class="marks" id="marks"></div>
+          </div>
+          <div class="empty" id="empty">
+            <div class="empty-copy">
+              <h2>Your route appears here.</h2>
+              <p>Describe a product and run it, or replay a recorded run. Each junction is one Decider call. Each branch is an option; the likelier it is, the longer its stub. The one Decider takes carries on to the next junction.</p>
+            </div>
+            <svg class="ghost" viewBox="0 0 1000 300" aria-hidden="true" preserveAspectRatio="xMidYMax meet">
+              <g fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M20 210H215L265 160H470L520 210H740L790 150H980"/>
+                <path d="M265 160L315 110H420" opacity=".45"/>
+                <path d="M520 210L570 260H690" opacity=".45"/>
+                <path d="M790 150L840 100H930" opacity=".45"/>
+              </g>
+              <g fill="var(--enamel)" stroke="currentColor" stroke-width="4">
+                <circle cx="140" cy="210" r="13"/><circle cx="400" cy="160" r="13"/><circle cx="660" cy="210" r="13"/><circle cx="880" cy="150" r="13"/>
+              </g>
+              <g class="ghost-n" text-anchor="middle" fill="currentColor">
+                <text x="140" y="262">22</text><text x="400" y="212">98</text><text x="660" y="262">11,516</text><text x="880" y="202">18,946</text>
+              </g>
+              <g class="ghost-t" text-anchor="middle" fill="currentColor">
+                <text x="140" y="284">sections</text><text x="400" y="234">chapters</text><text x="660" y="284">decisions</text><text x="880" y="224">codes</text>
+              </g>
+            </svg>
           </div>
         </div>
+        <ul class="key" aria-label="Map key">
+          <li><i class="k-route"></i>chosen route</li>
+          <li><i class="k-spur"></i>option not taken</li>
+          <li><i class="k-none"></i>none of these</li>
+        </ul>
       </div>
 
       <ol class="sr" id="sr-trail" aria-live="polite" aria-label="Decider forks so far"></ol>

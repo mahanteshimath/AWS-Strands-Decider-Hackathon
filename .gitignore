@@ -37,3 +37,5 @@ video/*/CLAUDE.md
 .uvicorn.*
 .shots/
 PRODUCT.md
+# Social pitch video builds (the published video lives on the hosting platform)
+brag-output*/

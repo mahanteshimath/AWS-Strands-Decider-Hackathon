@@ -32,7 +32,9 @@ def main() -> None:
     js = js.replace("`/api/replay/${encodeURIComponent(id)}`", "`api/replay/${encodeURIComponent(id)}.json`")
     js = js.replace('"/api/health"', '"api/health.json"').replace('"/api/replays"', '"api/replays.json"')
     (OUT / "app.js").write_text(js, encoding="utf-8")
-    shutil.copy(web.STATIC / "style.css", OUT / "style.css")
+    css = (web.STATIC / "style.css").read_text(encoding="utf-8")
+    (OUT / "style.css").write_text(css.replace("url(/static/", "url("), encoding="utf-8")
+    shutil.copytree(web.STATIC / "fonts", OUT / "fonts")
 
     release = web.tree.release.get("description")
     (OUT / "api" / "health.json").write_text(json.dumps({"live": False, "hts_release": release}), encoding="utf-8")

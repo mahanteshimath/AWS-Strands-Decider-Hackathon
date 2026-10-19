@@ -4,12 +4,15 @@
 
 Live mode streams each Decider fork over Server-Sent Events while TariffTrail classifies.
 Replay mode plays back real recorded evaluation runs (eval/results/*/tariff_trail.jsonl) and says so.
+Simulate mode runs the same search on any product with a local keyword stand-in for Decider
+(tariff_trail/simulate.py), so new routes can be shown without a server; every result says simulated.
 """
 
 from __future__ import annotations
 
 import json
 import queue
+import random
 import threading
 from pathlib import Path
 from typing import Any
@@ -21,6 +24,7 @@ from pydantic import BaseModel, Field
 from ..classify import TariffTrail
 from ..decider import Decider, DeciderUnavailable
 from ..hts.tree import load
+from ..simulate import Simulator
 from ..tree_descent import NONE_KEY, SEED_KEY
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -29,10 +33,16 @@ RESULTS = ROOT / "eval" / "results"
 
 app = FastAPI(title="TariffTrail")
 tree = load()
+simulator = Simulator(tree)
+SIM_PACE_S = 0.45  # seconds between simulated forks, so the map can be watched
 
 
 class ClassifyRequest(BaseModel):
     facts: str = Field(min_length=10, max_length=4000)
+
+
+class SimulateRequest(ClassifyRequest):
+    seed: int | None = None  # noise seed; omitted -> a fresh one, so repeat runs explore differently
 
 
 def label(node_id: str) -> dict[str, str]:
@@ -50,14 +60,15 @@ def label(node_id: str) -> dict[str, str]:
     return {"id": node_id, "code": f"{prefix}{code}".strip(), "text": text[:220]}
 
 
-def fork_event(event: dict[str, Any]) -> dict[str, Any]:
+def fork_event(event: dict[str, Any], *, simulated: bool = False) -> dict[str, Any]:
     ranked = sorted(event["probs"].items(), key=lambda kv: kv[1], reverse=True)[:6]
     return {
         "event": "fork",
+        "simulated": simulated,
         "node": label(event["node"]),
         "p_path": round(event["p_path"], 4),
         "confidence": round(event["confidence"], 3),
-        "latency_ms": round(event["latency_ms"]),
+        "latency_ms": None if simulated else round(event["latency_ms"]),  # simulated forks are paced, not timed
         "options": [{**label(c), "p": round(p, 4)} for c, p in ranked],
     }
 
@@ -101,10 +112,11 @@ def static(name: str) -> FileResponse:
 
 @app.get("/api/health")
 def health() -> dict[str, Any]:
+    base = {"simulate": True, "samples": len(_cases()), "hts_release": tree.release.get("description")}
     try:
-        return {"live": True, "decider": Decider().health(), "hts_release": tree.release.get("description")}
+        return {**base, "live": True, "decider": Decider().health()}
     except DeciderUnavailable as exc:
-        return {"live": False, "error": str(exc), "hts_release": tree.release.get("description")}
+        return {**base, "live": False, "error": str(exc)}
 
 
 @app.post("/api/classify")
@@ -129,14 +141,86 @@ def classify(request: ClassifyRequest) -> StreamingResponse:
     return StreamingResponse(stream(), media_type="text/event-stream")
 
 
+def sim_result_event(sim, seed: int) -> dict[str, Any]:
+    result = sim.result
+    leaf = result.leaf
+    node = tree[leaf] if leaf else None
+    return {
+        "event": "result",
+        "simulated": True,
+        "seed": seed,
+        "code": node.htsno if node and node.htsno else sim.code,
+        "status": result.status,
+        "route": "simulated",
+        "auto": False,
+        "fast_track": False,
+        "p": round(result.p, 4),
+        "path": [label(n.id) for n in tree.path(leaf)] if leaf else [],
+        "duty": next((n.duty for n in reversed(tree.path(leaf)) if n.duty), "") if leaf else "",
+        "decider_code": sim.code,
+        "precedent_code": "",
+        "adjudications": [],
+        "decider_calls": sim.forks,
+        "backtracks": result.off_path,
+        "llm_calls": 0,
+        "wall_ms": None,
+        "hts_release": tree.release.get("description"),
+    }
+
+
+@app.post("/api/simulate")
+def simulate(request: SimulateRequest) -> StreamingResponse:
+    events: queue.Queue = queue.Queue()
+    seed = request.seed if request.seed is not None else random.randrange(1, 1_000_000)
+
+    def work() -> None:
+        try:
+            sim = simulator.run(request.facts, seed=seed, pace_s=SIM_PACE_S,
+                                observe=lambda e: events.put(fork_event(e, simulated=True)))
+            events.put(sim_result_event(sim, seed))
+        except Exception as exc:
+            events.put({"event": "error", "message": str(exc)[:300]})
+        events.put(None)
+
+    threading.Thread(target=work, daemon=True).start()
+
+    def stream():
+        while (item := events.get()) is not None:
+            yield f"data: {json.dumps(item)}\n\n"
+
+    return StreamingResponse(stream(), media_type="text/event-stream")
+
+
+_CASES: dict[str, dict[str, Any]] | None = None
+
+
+def _cases() -> dict[str, dict[str, Any]]:
+    """The labelled evaluation products (2026 CBP rulings, facts rewritten without the answer)."""
+    global _CASES
+    if _CASES is None:
+        cases = {}
+        for split in ("dev", "test"):
+            path = ROOT / "data" / "eval" / f"{split}.jsonl"
+            if path.exists():
+                for line in path.open(encoding="utf-8"):
+                    case = json.loads(line)
+                    cases[case["id"]] = case
+        _CASES = cases
+    return _CASES
+
+
+@app.get("/api/sample")
+def sample(exclude: str = "") -> dict[str, Any]:
+    """A random real product to try, with CBP's ruled code for comparison."""
+    pool = [c for c in _cases().values() if c["id"] != exclude]
+    if not pool:
+        raise HTTPException(404, "no labelled products on this server")
+    case = random.choice(pool)
+    return {"id": case["id"], "title": case["title"], "facts": case["facts"], "gold": case["gold"]}
+
+
 def _recorded() -> dict[str, dict[str, Any]]:
-    cases = {}
-    for split in ("dev", "test"):
-        path = ROOT / "data" / "eval" / f"{split}.jsonl"
-        if path.exists():
-            for line in path.open(encoding="utf-8"):
-                case = json.loads(line)
-                cases[case["id"]] = case
+    cases = _cases()
     out = {}
     for path in sorted(RESULTS.glob("*/tariff_trail.jsonl")):
         for line in path.open(encoding="utf-8"):

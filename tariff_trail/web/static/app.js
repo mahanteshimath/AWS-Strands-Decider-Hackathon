@@ -15,11 +15,12 @@ const SAMPLES = [
 ];
 
 // map geometry (px at zoom 1)
-const ROW = 36, COL = 470, ORIGIN_COL = 350, PAD = 44, GAP = 28, RING = 13, PLAQUE_W = 240;
+const ROW = 56, COL = 470, ORIGIN_COL = 480, PAD = 44, GAP = 28, RING = 13, PLAQUE_W = 240;
 
 const state = {
   forks: [], origin: null, facts: "", pathIds: null, follow: true, fit: false,
   token: 0, running: false, t0: 0, timer: null, sweepDone: false, replay: false,
+  live: false, sample: null,
 };
 
 function el(tag, cls, text) {
@@ -59,6 +60,8 @@ function resetState() {
   state.pathIds = null;
   state.sweepDone = false;
   state.follow = true;
+  state.running = false;
+  setBusy(null);  // a run cut short by a new one must not leave the controls disabled
   $("sr-trail").replaceChildren();
   $("canvas").classList.remove("done");
   $("recorded").hidden = true;
@@ -138,7 +141,8 @@ function render() {
   const marks = $("marks");
   const zoom = state.fit ? fitZoom() : 1;
   canvas.style.zoom = zoom;
-  const { W, H } = layout(map.clientWidth, map.clientHeight, zoom);
+  const stableH = window.matchMedia("(max-width: 920px)").matches ? map.clientHeight : Math.min(map.clientHeight, Math.max(300, window.innerHeight - 52 - 350));
+  const { W, H } = layout(map.clientWidth, stableH, zoom);
   canvas.style.width = `${W}px`;
   canvas.style.height = `${H}px`;
   for (const node of [wires, marks]) { node.style.width = `${W}px`; node.style.height = `${H}px`; }
@@ -149,6 +153,7 @@ function render() {
   const o = state.origin;
   const started = state.running || state.forks.length > 0 || !!state.facts;
   $("empty").classList.toggle("gone", started);
+  $("fit").disabled = state.forks.length === 0;
   if (!started) return;
 
   const ids = state.pathIds ? new Set(state.pathIds) : null;
@@ -162,7 +167,7 @@ function render() {
   const plaque = el("div", "plaque");
   plaque.style.left = `${PAD}px`;
   plaque.style.top = `${r1(o.y)}px`;
-  plaque.append(el("b", null, "Product"), el("span", null, state.facts || "Describing the product"));
+  plaque.append(el("span", null, state.facts || "Describing the product"));
   plaque.title = state.facts;
   marks.append(plaque);
 
@@ -175,18 +180,18 @@ function render() {
     const x3 = startX;
     let d = fanD;
     let endX;
-    let labelMax = 330;
+    let labelMax = 300;
     if (opts.kid) {
       const c = connector(x3, rowY, opts.kid);
       d += ` ${c.d}`;
-      labelMax = Math.max(120, Math.min(330, c.bendX - x3 - 8));
+      labelMax = Math.max(130, Math.min(300, c.bendX - x3 - 8));
       endX = opts.kid.x;
     } else {
       endX = x3 + 22 + 150 * opts.p;
       d += ` H${r1(endX)}`;
     }
     const cls = "w" + (opts.none ? " none" : opts.kid ? "" : " spur") + (opts.fresh ? " draw" : "");
-    const path = svg("path", { d, class: cls, pathLength: 1 }, baseLayer);
+    const path = svg("path", opts.none ? { d, class: cls } : { d, class: cls, pathLength: 1 }, baseLayer);
     if (opts.fresh) path.style.setProperty("--d", `${opts.delay}ms`);
     if (opts.lit) {
       const lp = svg("path", { d, class: "w lit" + (sweep ? " sweep" : ""), pathLength: 1 }, litLayer);
@@ -215,19 +220,27 @@ function render() {
   o.kids.forEach((kid, i) => {
     const lit = ids && kid.options.some((x) => ids.has(x.id));
     drawBranch(startX, o.y, o.y, `M${startX} ${r1(o.y)}`,
-      kid.node, { kid, p: 1, pick: true, fresh: !kid.drawn, delay: 0, lit, litDelay: (order.get(kid.id) || 0) * 240 - 120, showPct: false });
+      kid.node.id === "seeded" ? { ...kid.node, text: "Past rulings propose headings" } : kid.node, { kid, p: 1, pick: true, fresh: !kid.drawn, delay: 0, lit, litDelay: (order.get(kid.id) || 0) * 240 - 120, showPct: false });
   });
 
   for (const f of state.forks) {
     const n = f.options.length;
+    const litFork = !!ids && f.options.some((x) => ids.has(x.id));
+    const stemX1 = f.x + RING;
+    const stemX2 = f.x + RING + 18;
+    const stemD = `M${r1(stemX1)} ${r1(f.y)} H${r1(stemX2)}`;
+    const stem = svg("path", { d: stemD, class: "w" + (!f.drawn ? " draw" : ""), pathLength: 1 }, baseLayer);
+    if (!f.drawn) stem.style.setProperty("--d", "100ms");
+    if (litFork) {
+      const ls = svg("path", { d: stemD, class: "w lit" + (sweep ? " sweep" : ""), pathLength: 1 }, litLayer);
+      if (sweep) ls.style.setProperty("--d", `${(order.get(f.id) || 0) * 240}ms`);
+    }
     f.options.forEach((opt, i) => {
       const rowY = f.y + (i - (n - 1) / 2) * ROW;
       const dy = rowY - f.y;
       const ad = Math.abs(dy);
-      const x1 = f.x + RING;
-      const x2 = f.x + RING + 18;
-      const x3 = x2 + ad;
-      const fan = `M${r1(x1)} ${r1(f.y)} H${r1(x2)}` + (ad ? ` L${r1(x3)} ${r1(rowY)}` : "");
+      const x3 = stemX2 + ad;
+      const fan = `M${r1(stemX2)} ${r1(f.y)}` + (ad ? ` L${r1(x3)} ${r1(rowY)}` : "");
       const kid = f.kids.find((k) => k.node.id === opt.id) || null;
       const isNone = opt.id === "none_of_these";
       drawBranch(x3, f.y, rowY, fan, opt, {
@@ -237,7 +250,7 @@ function render() {
       });
     });
 
-    const lit = !!ids && f.options.some((x) => ids.has(x.id));
+    const lit = litFork;
     const g = svg("g", { class: "stn" + (lit ? " lit" : "") + (!f.drawn ? " draw" : "") }, ringLayer);
     svg("circle", { cx: r1(f.x), cy: r1(f.y), r: RING, class: "ring" }, g);
     const t = svg("text", { x: r1(f.x), y: r1(f.y + 0.5), class: "ring-n" }, g);
@@ -259,7 +272,18 @@ function render() {
   o.drawn = true;
   if (ids) { state.sweepDone = true; canvas.classList.add("done"); }
 
-  if (state.follow && !state.fit) followLatest();
+  if (state.follow && !state.fit && !sweep) followLatest();
+  if (sweep && state.follow && !state.fit) panAlong(routeForks);
+}
+
+function panAlong(forks) {
+  const map = $("map");
+  forks.forEach((f, i) => {
+    setTimeout(() => {
+      if (!state.follow) return;
+      map.scrollTo({ left: Math.max(0, f.x - map.clientWidth * 0.4), top: Math.max(0, f.y - map.clientHeight / 2), behavior: "smooth" });
+    }, i * 240);
+  });
 }
 
 function fitZoom() {
@@ -269,7 +293,7 @@ function fitZoom() {
   const maxX = Math.max(...forks.map((f) => f.x)) + 470;
   const rows = Math.max(...forks.map((f) => f.options.length));
   const approxH = Math.max(rows * ROW, forks.length * 30) + PAD * 2 + 140;
-  return Math.max(0.42, Math.min(1, (map.clientWidth - 12) / maxX, (map.clientHeight - 12) / Math.max(approxH, 300)));
+  return Math.max(0.3, Math.min(1, (map.clientWidth - 12) / maxX, (map.clientHeight - 12) / Math.max(approxH, 300)));
 }
 
 function followLatest() {
@@ -322,21 +346,24 @@ function resetBoard() {
   sign.className = "sign idle";
   sign.textContent = "Awaiting a run";
   $("tier-note").textContent = "TariffTrail never auto-files a tariff code. Every result goes to a licensed broker.";
-  $("tier-note").style.color = "";
+  $("tier-note").classList.remove("err");
   for (const id of ["sources", "metrics", "detail"]) $(id).hidden = true;
 }
 
 function renderResult(r, gold) {
   clearInterval(state.timer);
   state.running = false;
-  $("go").classList.remove("busy");
+  setBusy(null);
   const sign = $("sign");
 
   if (r.event === "error") {
     $("ticker").textContent = "Run failed";
     sign.className = "sign err pop";
     sign.textContent = "Could not classify";
-    $("tier-note").textContent = r.message;
+    const note = $("tier-note");
+    note.textContent = r.message;
+    note.classList.add("err");
+    render();
     return;
   }
 
@@ -345,30 +372,35 @@ function renderResult(r, gold) {
   const lead = REDUCED ? 0 : Math.min(2200, 520 + state.forks.filter((f) => f.options.some((o) => state.pathIds.includes(o.id))).length * 240);
 
   const secs = r.wall_ms ? `${(r.wall_ms / 1000).toFixed(1)} s` : "";
-  $("ticker").textContent = `${r.decider_calls ?? state.forks.length} Decider calls${secs ? " · " + secs : ""}`;
+  $("ticker").textContent = r.simulated
+    ? `${r.decider_calls ?? state.forks.length} simulated forks · ${r.backtracks || 0} wrong turns explored`
+    : `${r.decider_calls ?? state.forks.length} Decider calls${secs ? " · " + secs : ""}`;
 
   setTimeout(() => {
     if (r.code) setCode(r.code, true);
     else { $("code").className = "digits none"; $("code").textContent = "No code reached"; }
 
-    const tier = r.auto ? ["auto", "Auto-cleared", "Cleared by policy."]
+    const tier = r.simulated ? ["sim", "Simulated", "A keyword stand-in answered each fork, not Strands Decider. It shows how the search moves and backtracks; it is not a tariff answer."]
       : r.fast_track ? ["fast", "Fast-track review", "Decider, Bedrock and past rulings agree. A licensed broker still confirms before filing."]
-        : ["review", "Broker review", "The sources disagree. Full broker review before filing."];
+      : ["review", "Broker review", "The sources disagree. Full broker review before filing."];
     sign.className = `sign ${tier[0]} pop`;
     sign.textContent = tier[1];
     $("tier-note").textContent = tier[2];
 
     const g = $("gold");
     if (gold) {
-      const ok = digitsOf(r.code) === gold;
-      g.replaceChildren(document.createTextNode("CBP's ruling "), el("b", null, fmt(gold)), document.createTextNode(" · "), el("span", ok ? "ok" : "miss", ok ? "match" : "different"));
+      const got = digitsOf(r.code);
+      const ok = got === gold;
+      const near = ok ? "match" : got.slice(0, 4) === gold.slice(0, 4) ? "same heading" : got.slice(0, 2) === gold.slice(0, 2) ? "same chapter" : "different";
+      g.replaceChildren(document.createTextNode("CBP's ruling "), el("b", null, fmt(gold)), document.createTextNode(" · "), el("span", ok ? "ok" : "miss", near));
       g.hidden = false;
     } else g.hidden = true;
 
     const src = $("sources");
     src.replaceChildren();
     const finalDigits = digitsOf(r.code);
-    const rows = [["Decider's best path", r.decider_code], ["Nearest past rulings", r.precedent_code], [r.llm_calls ? "Final pick (Bedrock)" : "Final pick", r.code]];
+    const rows = r.simulated ? [["Simulated path", r.code]]
+      : [["Decider path", r.decider_code], ["Past rulings", r.precedent_code], [r.llm_calls ? "Final pick" : "Final", r.code]];
     for (const [who, val] of rows) {
       const li = el("li", "src " + (val && digitsOf(val) === finalDigits ? "ok" : "diff"));
       li.append(el("span", "mark"), el("span", null, who), el("span", "val", fmt(val) || "none"));
@@ -379,8 +411,13 @@ function renderResult(r, gold) {
     const metrics = $("metrics");
     metrics.replaceChildren();
     const add = (k, v) => { const d = el("div"); d.append(el("dd", null, v), el("dt", null, k)); metrics.append(d); };
-    add("Decider calls", String(r.decider_calls ?? state.forks.length));
-    add("LLM calls", String(r.llm_calls ?? 0));
+    if (r.simulated) {
+      add("Simulated forks", String(r.decider_calls ?? state.forks.length));
+      add("Wrong turns explored", String(r.backtracks || 0));
+    } else {
+      add("Decider calls", String(r.decider_calls ?? state.forks.length));
+      add("LLM calls", String(r.llm_calls ?? 0));
+    }
     if (r.wall_ms) add("Time", `${(r.wall_ms / 1000).toFixed(1)} s`);
     add("General duty", r.duty || "-");
     metrics.hidden = false;
@@ -414,42 +451,100 @@ function startTicker(label) {
   state.timer = setInterval(tick, 100);
 }
 
-async function classifyLive() {
+async function classifyLive() { return runStream("live"); }
+async function simulate() { return runStream("sim"); }
+
+// Disable every run control while a run is going; `btn` gets the busy look. setBusy(null) restores.
+function setBusy(btn) {
+  for (const id of ["go", "sim", "fresh"]) {
+    const b = $(id);
+    b.classList.toggle("busy", b === btn);
+    b.disabled = btn ? true : id === "go" && !state.live;
+  }
+}
+
+// CBP's ruled code, when the textarea still holds the loaded real product unchanged.
+const goldFor = (facts) => (state.sample && state.sample.facts.trim() === facts ? state.sample.gold : null);
+
+async function newProduct() {
+  const fresh = $("fresh");
+  fresh.disabled = true;
+  try {
+    const res = await fetch(`/api/sample?exclude=${encodeURIComponent(state.sample ? state.sample.id : "")}`);
+    if (!res.ok) throw new Error(`The server answered ${res.status}.`);
+    const s = await res.json();
+    state.sample = s;
+    $("facts").value = s.facts;
+    const note = $("sample-note");
+    note.replaceChildren(document.createTextNode("Real product from CBP ruling "), el("b", null, s.id),
+      document.createTextNode(` (${s.title}). Its ruled code is shown after the run.`));
+    note.hidden = false;
+    return s;
+  } catch (err) {
+    const note = $("sample-note");
+    note.textContent = `Could not load a product: ${err.message || err}`;
+    note.hidden = false;
+    return null;
+  } finally {
+    if (!state.running) fresh.disabled = false;
+  }
+}
+
+async function runStream(kind) {
+  const sim = kind === "sim";
+  if (sim && $("facts").value.trim().length < 10 && !(await newProduct())) return;
   const facts = $("facts").value.trim();
   if (facts.length < 10) { $("facts").focus(); return; }
+  const gold = goldFor(facts);
   resetState();
   state.facts = facts;
   state.running = true;
-  $("go").disabled = true;
-  $("go").classList.add("busy");
+  revealStage();
+  setBusy($(sim ? "sim" : "go"));
   const token = state.token;
-  startTicker("Decider live");
+  if (sim) {
+    const note = $("recorded");
+    note.textContent = "Simulated run. A local keyword scorer answers each fork in place of Strands Decider; the tariff tree, the best-first search and its none-of-these backtracking are the real ones.";
+    note.title = note.textContent;
+    note.hidden = false;
+  }
+  startTicker(sim ? "Simulating" : "Decider live");
   render();
+  const RECOVER = sim ? "Try again, or replay a recorded run." : "Check that Decider is running, press Simulate, or replay a recorded run.";
+  let finished = false;
+  const handle = (chunk) => {
+    const text = chunk.replace(/^data: /, "").trim();
+    if (!text) return;
+    const event = JSON.parse(text);
+    if (event.event === "fork") addFork(event);
+    else { finished = true; renderResult(event.event === "error" ? { ...event, message: `${event.message} ${RECOVER}` } : event, gold); }
+  };
   try {
-    const response = await fetch("/api/classify", {
+    const response = await fetch(sim ? "/api/simulate" : "/api/classify", {
       method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ facts }),
     });
+    if (!response.ok || !response.body) throw new Error(`The server answered ${response.status}.`);
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
     let buffer = "";
     for (;;) {
       const { value, done } = await reader.read();
-      if (done || token !== state.token) break;
+      if (token !== state.token) return;
+      if (done) break;
       buffer += decoder.decode(value, { stream: true });
       let cut;
       while ((cut = buffer.indexOf("\n\n")) >= 0) {
-        const chunk = buffer.slice(0, cut).replace(/^data: /, "");
+        const chunk = buffer.slice(0, cut);
         buffer = buffer.slice(cut + 2);
-        if (!chunk) continue;
-        const event = JSON.parse(chunk);
-        if (event.event === "fork") addFork(event);
-        else renderResult(event);
+        handle(chunk);
       }
     }
+    if (buffer.trim()) handle(buffer);
+    if (!finished && token === state.token) renderResult({ event: "error", message: `The run ended before a code came back. ${RECOVER}` });
   } catch (err) {
-    renderResult({ event: "error", message: String(err) });
+    if (token === state.token) renderResult({ event: "error", message: `${err.message || err} ${RECOVER}` });
   } finally {
-    if (token === state.token) $("go").disabled = false;
+    if (token === state.token) setBusy(null);
   }
 }
 
@@ -457,18 +552,22 @@ async function replay() {
   const id = $("replays").value;
   if (!id) return;
   resetState();
+  revealStage();
   const token = state.token;
   $("play").disabled = true;
   try {
-    const data = await (await fetch(`/api/replay/${encodeURIComponent(id)}`)).json();
+    const res = await fetch(`/api/replay/${encodeURIComponent(id)}`);
+    if (!res.ok) throw new Error(`The server answered ${res.status} for that recorded run.`);
+    const data = await res.json();
     if (token !== state.token) return;
     $("facts").value = data.facts;
     state.facts = data.facts;
     state.running = true;
     state.replay = true;
     const note = $("recorded");
-    note.textContent = `Recorded run, ruling ${data.id} (${data.title}). Replayed from the evaluation results; timings are the original run's.`;
+    note.textContent = `Recorded run, ruling ${data.id} (${data.title}). Replayed from the evaluation results; the map shows the ${data.forks.length} forks along the winning path, and timings are the original run's.`;
     note.hidden = false;
+    note.title = note.textContent;
     startTicker("Replaying");
     render();
     await sleep(500);
@@ -480,10 +579,14 @@ async function replay() {
     if (token !== state.token) return;
     renderResult(data.result, data.gold);
   } catch (err) {
-    renderResult({ event: "error", message: String(err) });
+    if (token === state.token) renderResult({ event: "error", message: `${err.message || err} Pick another recorded run, or reload the page.` });
   } finally {
     if (token === state.token) $("play").disabled = false;
   }
+}
+
+function revealStage() {
+  if (window.matchMedia("(max-width: 920px)").matches) document.querySelector(".stage").scrollIntoView({ behavior: REDUCED ? "auto" : "smooth", block: "start" });
 }
 
 /* ---------------- boot ---------------- */
@@ -505,7 +608,8 @@ function wireMap() {
   window.addEventListener("pointerup", () => { drag = null; map.classList.remove("dragging"); });
   map.addEventListener("wheel", () => { state.follow = false; }, { passive: true });
   let resizeTimer;
-  window.addEventListener("resize", () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(render, 140); });
+  const rerender = () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(render, 120); };
+  new ResizeObserver(rerender).observe(map);
   $("fit").addEventListener("click", () => {
     state.fit = !state.fit;
     $("fit").setAttribute("aria-pressed", String(state.fit));
@@ -522,10 +626,13 @@ async function init() {
   for (const [name, text] of SAMPLES) {
     const b = el("button", null, name);
     b.type = "button";
-    b.addEventListener("click", () => { $("facts").value = text; $("facts").focus(); });
+    b.addEventListener("click", () => { $("facts").value = text; $("sample-note").hidden = true; $("facts").focus(); });
     $("samples").append(b);
   }
+  $("facts").addEventListener("input", () => { if (state.sample && !goldFor($("facts").value.trim())) $("sample-note").hidden = true; });
+  $("fresh").addEventListener("click", newProduct);
   $("go").addEventListener("click", classifyLive);
+  $("sim").addEventListener("click", simulate);
   $("play").addEventListener("click", replay);
   wireMap();
   render();
@@ -533,9 +640,21 @@ async function init() {
   try {
     const health = await (await fetch("/api/health")).json();
     const status = $("status");
-    $("status-text").textContent = health.live ? `Decider live · ${health.decider.device}` : "Decider offline · replay only";
+    // The hosted copy is static files: no simulator, no sample endpoint. Show only what this server can do.
+    const canSim = !!health.simulate;
+    $("status-text").textContent = health.live ? `Decider live, ${health.decider.device}` : canSim ? "Decider offline, simulate or replay" : "Decider offline, replay only";
     status.className = "status " + (health.live ? "live" : "off");
+    state.live = !!health.live;
+    $("sim").hidden = !canSim;
+    $("fresh").hidden = !canSim;
+    document.body.classList.toggle("nosim", !canSim);
+    $("go-note").textContent = canSim
+      ? "Decider is offline. Simulate runs the same search with a keyword stand-in for Decider, or replay a real recorded run below."
+      : "Live mode needs a running Decider. Replay a real recorded run below.";
     $("go").disabled = !health.live;
+    $("go-note").hidden = !!health.live;
+    document.body.classList.toggle("offline", !health.live);
+    $("go").title = health.live ? "" : canSim ? "Live mode needs a running Decider. Simulate, or replay a recorded run instead." : "Live mode needs a running Decider. Replay a recorded run instead.";
     $("release").textContent = health.hts_release ? `Tariff data: ${health.hts_release} (USITC)` : "";
   } catch (err) {
     $("status-text").textContent = "server unreachable";
@@ -544,7 +663,7 @@ async function init() {
   try {
     const list = await (await fetch("/api/replays")).json();
     for (const item of list) {
-      const option = el("option", null, `${item.id} · ${item.title}${item.correct ? "" : " (missed)"}`);
+      const option = el("option", null, `${item.id}: ${item.title}${item.correct ? "" : " (missed)"}`);
       option.value = item.id;
       $("replays").append(option);
     }

@@ -150,6 +150,11 @@ uv run uvicorn tariff_trail.web.app:app --port 8000
 # open http://localhost:8000 and pick a recorded run from the dropdown
 ```
 
+The page can also **Simulate** any product, or a random real 2026 ruling (**New product**): the real search over
+the real tariff tree, with a local keyword scorer standing in for Decider. Simulated runs are labelled as such;
+they show how the search moves and backtracks, not tariff answers (the stand-in reaches the right chapter on
+about a third of dev products).
+
 Or just open the hosted replay-only copy: **https://main.d3o5ktn9yc15oj.amplifyapp.com/**
 
 ### 2. Run the tests (offline)
@@ -171,6 +176,13 @@ uv run python -m tariff_trail.agent "Classify and file: women's knitted pullover
 Decider runs on a GPU (an NVIDIA L4 gives ~72 ms per call) or on CPU, just much more slowly. [`infra/`](infra/)
 contains the AWS setup actually used: an SSM-only EC2 host with no inbound ports, an IAM instance role for Bedrock,
 a private S3 bucket and a budget alert.
+
+**Run Decider on a laptop (free, CPU).** If the Hugging Face Hub is unreachable from your network, the same
+files are mirrored on ModelScope (`StrandsAgents/strands-decider-2B-qwen3.5-v1-2610` plus its base model
+`Qwen/Qwen3.5-2B-Base`). Download both into `~/.cache/strands-decider/`, check them with
+`python scripts/verify_decider_download.py` (ModelScope's sha256s and the checkpoint's own `MANIFEST.sha256`),
+install `strands-decider` into its own environment (`%LOCALAPPDATA%\tariff-trail\decider-venv`), then run
+`infra/decider_local.ps1`. It serves Decider offline on port 8099, so the page switches to "Decider live".
 
 ## Use the pattern in your project
 
