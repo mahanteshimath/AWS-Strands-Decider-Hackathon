@@ -90,12 +90,16 @@ class ClassificationGate(InterventionHandler):
                 ))
 
         if not result.auto:
-            entry["verdict"] = "confirm: broker review" + (" (fast-track)" if result.fast_track else "")
+            tier = " (fast-track)" if result.fast_track else " (heading agreed)" if result.heading_agreed else ""
+            entry["verdict"] = "confirm: broker review" + tier
             if result.fast_track:
                 why = "Decider, Bedrock and the nearest past CBP rulings all agree (fast-track review)"
             else:
                 alternatives = ", ".join(c["htsno"] for c in result.candidates if c["code"] != result.code)[:80]
                 why = f"the sources disagree; alternatives considered: {alternatives or 'none'}"
+                if result.heading_agreed:
+                    why = (f"all three sources agree on heading {result.heading_agreed} but not on the full code; "
+                           f"alternatives considered: {alternatives or 'none'}")
             return Confirm(prompt=f"Broker review needed before filing {result.htsno}: {why}. Approve filing? (yes/no)")
 
         entry["verdict"] = "proceed"

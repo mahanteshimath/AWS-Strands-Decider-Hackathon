@@ -443,7 +443,8 @@ function renderResult(r, gold) {
 
     const tier = r.simulated ? ["sim", "Simulated", "A keyword stand-in answered each fork, not Strands Decider. It shows how the search moves and backtracks; it is not a tariff answer."]
       : r.fast_track ? ["fast", "Fast-track review", "Decider, Bedrock and past rulings agree. A licensed broker still confirms before filing."]
-      : ["review", "Broker review", "The sources disagree. Full broker review before filing."];
+      : r.heading_agreed ? ["heading", `Heading ${r.heading_agreed} agreed`, `Decider, Bedrock and past rulings all land in heading ${r.heading_agreed}, but not on the same full code. A licensed broker confirms the exact code before filing.`]
+      : ["review", "Broker review", "The sources disagree, even on the heading. Full broker review before filing."];
     sign.className = `sign ${tier[0]} pop`;
     sign.textContent = tier[1];
     $("tier-note").textContent = tier[2];

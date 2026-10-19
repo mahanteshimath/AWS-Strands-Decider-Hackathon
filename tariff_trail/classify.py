@@ -14,6 +14,7 @@ from typing import Any
 
 from . import bedrock
 from .adjudicator import ShortlistAdjudicator
+from .agreement import agreed_heading
 from .decider import Decider
 from .hts.questions import HTS_WORDING, hts_state
 from .hts.tree import HTSTree, load
@@ -44,6 +45,7 @@ class Classification:
     decider_code: str = ""  # Decider's own best path
     precedent_code: str = ""  # the nearest past rulings' vote
     fast_track: bool = False  # Decider, Bedrock and past rulings agree: review first, still reviewed
+    heading_agreed: str = ""  # the 4-digit heading all three sources share ("" if they split); also set when fast_track
     off_path: int = 0
     decider_calls: int = 0
     decider_ms: float = 0.0
@@ -113,6 +115,7 @@ class TariffTrail:
             decider_code=decider_code,
             precedent_code=precedent_code,
             fast_track=bool(code) and code == decider_code == precedent_code,
+            heading_agreed=agreed_heading(code, decider_code, precedent_code),
             off_path=result.off_path,
             decider_calls=self.decider.stats.calls - calls_before,
             decider_ms=self.decider.stats.wall_ms - ms_before,

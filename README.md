@@ -319,7 +319,8 @@ the tables above with no model access.
 - **Decision support, not legal advice.** A licensed customs broker is responsible for every entry. TariffTrail
   never auto-files.
 - 36.7% exact 10-digit accuracy is a real improvement over the baselines, not a solved problem. Use the fast-track tier
-  (76% correct) to prioritise review, not to skip it.
+  (76% correct) to prioritise review, not to skip it. The heading-agreed tier (50.8% exact, 73% right at the
+heading; defined after the test run) is a second, weaker signal.
 - At 10 digits, TariffTrail's lead over a retrieval shortlist plus the same Bedrock pick (36.7% vs 33.1%) is not
   statistically significant; Decider's measured contribution is the heading and the codes retrieval cannot reach
   ([ablation](eval/ABLATION.md)). The ablation was run after the test evaluation.

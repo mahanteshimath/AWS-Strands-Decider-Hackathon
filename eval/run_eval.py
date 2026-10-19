@@ -82,7 +82,7 @@ def runner(system: str, tree):
         adjudicate = system == "tariff_trail"
         trail = TariffTrail(tree=tree, decider=Decider(), policy=TARIFF_POLICY, adjudicate=adjudicate)
         c = trail.classify(facts)
-        return {"code": c.code, "valid": bool(c.code) and tree.exists(c.code), "auto": c.auto, "fast_track": c.fast_track,
+        return {"code": c.code, "valid": bool(c.code) and tree.exists(c.code), "auto": c.auto, "fast_track": c.fast_track, "heading_agreed": c.heading_agreed,
                 "status": c.status, "route": c.route, "p": c.p, "p_best": c.candidates[0]["p"] if c.candidates else 0.0,
                 "decider_code": c.decider_code, "llm_code": c.code if adjudicate else None,
                 "precedent_code": c.precedent_code, "candidates": c.candidates,

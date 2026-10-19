@@ -281,6 +281,7 @@ body.offline.nosim #play:hover { background: #ffdd4d; border-color: #ffdd4d; }
 }
 .sign.idle { background: transparent; border: 1px dashed var(--faint); color: var(--dim); letter-spacing: 0.04em; text-transform: none; font-weight: 600; }
 .sign.fast { background: var(--signal); color: var(--signal-ink); box-shadow: inset 0 0 0 2px var(--signal), inset 0 0 0 3.5px var(--signal-ink); padding: 11px 16px; }
+.sign.heading { border: 2px solid var(--signal); color: var(--signal); padding: 7px 12px; box-shadow: inset 0 0 0 2px var(--deeper), inset 0 0 0 3px var(--signal); }
 .sign.review { border: 2px solid var(--nope); color: var(--nope); padding: 7px 12px; box-shadow: inset 0 0 0 2px var(--deeper), inset 0 0 0 3px var(--nope); }
 .sign.err { border: 2px solid var(--nope); color: var(--nope); text-transform: none; letter-spacing: 0; }
 .sign.sim { border: 2px dashed var(--line); color: var(--line); padding: 7px 12px; }

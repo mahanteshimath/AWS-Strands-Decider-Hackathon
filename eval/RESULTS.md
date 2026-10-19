@@ -50,10 +50,17 @@ n = 332), and accuracy rises with it (23% below 0.2, 37% at 0.2–0.4, 67% at 0.
 nowhere near a level at which filing without a broker would be responsible, so the frozen policy
 sends everything to review and uses agreement to order the queue:
 
-| tier | products | correct at 10 digits |
-|---|---|---|
-| **fast-track**: Decider, Bedrock and the nearest past rulings agree | 54 (16.3%) | 41 (75.9%) |
-| full review | 278 (83.7%) | 81 (29.1%) |
+| tier | products | correct at 4 digits | correct at 10 digits |
+|---|---|---|---|
+| **fast-track**: Decider, Bedrock and the nearest past rulings name the same code | 54 (16.3%) | 43 (79.6%) | 41 (75.9%) |
+| **heading agreed**: same 4-digit heading, codes differ (added after the test run) | 59 (17.8%) | 43 (72.9%) | 30 (50.8%) |
+| full review: the sources split even on the heading | 219 (66.0%) | 105 (47.9%) | 51 (23.3%) |
+
+The heading-agreed tier was defined after the test run, from the recorded rows, so treat it as
+exploratory. Its rule was not tuned on dev, which makes dev a fair check: on the 60 dev products,
+fast-track plus heading-agreed together covered 17 (28%) and 14 of them (82%) were right at the
+heading, against 34% and 76% on test. Nothing about the frozen classifier or the preregistered
+test numbers changed; the tier is a relabeling of the same three codes.
 
 Path probability vs observed accuracy (test):
 

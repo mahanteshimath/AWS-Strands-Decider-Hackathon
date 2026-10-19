@@ -10,10 +10,11 @@
 
 ### Review tiers (TariffTrail never auto-files a tariff code)
 
-| tier | products | correct at 10 digits |
-|---|---|---|
-| fast-track (Decider, Bedrock and past rulings agree) | 54 (16.3%) | 41 (75.9%) |
-| full review | 278 (83.7%) | 81 (29.1%) |
+| tier | products | correct at 4 digits | correct at 10 digits |
+|---|---|---|---|
+| fast-track (Decider, Bedrock and past rulings name the same code) | 54 (16.3%) | 43 (79.6%) | 41 (75.9%) |
+| heading agreed (same 4-digit heading, codes differ; added after the test run) | 59 (17.8%) | 43 (72.9%) | 30 (50.8%) |
+| full review (sources split even on the heading) | 219 (66.0%) | 105 (47.9%) | 51 (23.3%) |
 
 ### Why not auto-clear: Decider's path probability vs correctness
 

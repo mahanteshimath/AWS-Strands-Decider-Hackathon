@@ -13,9 +13,14 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
+
+from tariff_trail.agreement import agreed_heading  # noqa: E402
+
 RESULTS = ROOT / "eval" / "results"
 THRESHOLDS = [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
 
@@ -192,13 +197,18 @@ def main() -> None:
              f"{pct(s['acc8'])} | **{pct(s['acc10'])}** | {pct(s['invalid'])} | {s['llm_calls']:.2f} | {s['llm_tokens']:,.0f} | 0% (by policy) | - |")
 
         emit("\n### Review tiers (TariffTrail never auto-files a tariff code)\n")
-        emit("| tier | products | correct at 10 digits |")
-        emit("|---|---|---|")
+        emit("| tier | products | correct at 4 digits | correct at 10 digits |")
+        emit("|---|---|---|---|")
         fast = [r for r in trail if r.get("code") and r.get("code") == r.get("decider_code") == r.get("precedent_code")]
-        rest = [r for r in trail if r not in fast]
-        for name, rows in (("fast-track (Decider, Bedrock and past rulings agree)", fast), ("full review", rest)):
-            right = sum(1 for r in rows if r.get("code") == r["gold"])
-            emit(f"| {name} | {len(rows)} ({pct(len(rows) / len(trail))}) | {right} ({pct(right / len(rows)) if rows else '-'}) |")
+        heading = [r for r in trail if r not in fast and agreed_heading(r.get("code"), r.get("decider_code"), r.get("precedent_code"))]
+        rest = [r for r in trail if r not in fast and r not in heading]
+        for name, rows in (("fast-track (Decider, Bedrock and past rulings name the same code)", fast),
+                           ("heading agreed (same 4-digit heading, codes differ; added after the test run)", heading),
+                           ("full review (sources split even on the heading)", rest)):
+            right10 = sum(1 for r in rows if r.get("code") == r["gold"])
+            right4 = sum(1 for r in rows if (r.get("code") or "")[:4] == r["gold"][:4])
+            emit(f"| {name} | {len(rows)} ({pct(len(rows) / len(trail))}) | "
+                 f"{right4} ({pct(right4 / len(rows)) if rows else '-'}) | {right10} ({pct(right10 / len(rows)) if rows else '-'}) |")
 
         emit("\n### Why not auto-clear: Decider's path probability vs correctness\n")
         emit("| path probability | products | mean probability | actually correct (10-digit) |")

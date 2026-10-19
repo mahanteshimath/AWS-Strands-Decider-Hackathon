@@ -21,6 +21,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
+from ..agreement import agreed_heading
 from ..classify import TariffTrail
 from ..decider import Decider, DeciderUnavailable
 from ..hts.tree import load
@@ -82,6 +83,7 @@ def result_event(c) -> dict[str, Any]:
         "route": c.route,
         "auto": c.auto,
         "fast_track": c.fast_track,
+        "heading_agreed": c.heading_agreed,
         "p": round(c.p, 4),
         "path": [label(n.id) for n in tree.path(leaf)] if leaf else [],
         "duty": c.duty,
@@ -154,6 +156,7 @@ def sim_result_event(sim, seed: int) -> dict[str, Any]:
         "route": "simulated",
         "auto": False,
         "fast_track": False,
+        "heading_agreed": "",
         "p": round(result.p, 4),
         "path": [label(n.id) for n in tree.path(leaf)] if leaf else [],
         "duty": next((n.duty for n in reversed(tree.path(leaf)) if n.duty), "") if leaf else "",
@@ -257,6 +260,7 @@ def replay(ruling_id: str) -> dict[str, Any]:
     leaf = tree.by_code.get(final)
     precedent = row.get("precedent_code")
     fast = bool(row.get("fast_track")) or (final == row["decider_code"] == precedent)
+    heading = agreed_heading(final, row["decider_code"], precedent or "")
     return {
         "recorded": True,
         "id": ruling_id,
@@ -265,7 +269,7 @@ def replay(ruling_id: str) -> dict[str, Any]:
         "gold": case["gold"],
         "forks": forks,
         "result": {
-            "event": "result", "code": tree[leaf].htsno if leaf else final, "auto": False, "fast_track": fast,
+            "event": "result", "code": tree[leaf].htsno if leaf else final, "auto": False, "fast_track": fast, "heading_agreed": heading,
             "route": row.get("route", "adjudicated"), "p": row.get("p_best", 0.0),
             "path": [label(n.id) for n in tree.path(leaf)] if leaf else [],
             "duty": next((n.duty for n in reversed(tree.path(leaf)) if n.duty), "") if leaf else "",

@@ -149,5 +149,5 @@ The decision is only half of the pattern. The other half is what the agent may *
 | Code is not a real line | `Deny` |
 | Code did not come from the classifier in this session | `Guide` ("classify it first") |
 | Decider `noul`: the filing describes different goods from what was classified | `Guide` |
-| Path probability below the auto bar (always, for tariffs) | `Confirm`: a licensed broker approves; fast-track wording when Decider, Bedrock and past rulings agree |
+| Path probability below the auto bar (always, for tariffs) | `Confirm`: a licensed broker approves; fast-track wording when Decider, Bedrock and past rulings agree, heading-agreed wording when they share only the 4-digit heading |
 | Otherwise | `Proceed` |

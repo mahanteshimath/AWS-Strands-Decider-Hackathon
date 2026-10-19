@@ -6,6 +6,12 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- Heading-agreed review tier (`tariff_trail/agreement.py`, `heading_agreed` on results, a hollow yellow
+  stamp in the UI, wording in the gate's `Confirm`): Decider, Bedrock and the nearest past rulings share
+  the 4-digit heading but not the full code. 17.8% of test products, 72.9% right at the heading, 50.8%
+  exact, against 23.3% exact for the products that split even on the heading. Defined after the test
+  run and checked on dev, so it is documented as exploratory. The frozen classifier and the test
+  numbers are unchanged. `eval/report.py` now prints all three tiers.
 - Route map zoom controls (zoom out, zoom in, reset to 100%, fit to screen) on the map itself, plus Ctrl/Cmd+wheel or
   trackpad pinch to zoom around the cursor and `+` / `-` / `0` / `F` keys. Fit now measures the real route extent.
 - `tariff_trail/strands_kit.py`: the pattern for any Strands agent, a `decision_tool` and a domain-free

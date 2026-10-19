@@ -169,6 +169,12 @@ components:
     typography: "{typography.sign}"
     rounded: "{rounded.control}"
     padding: "11px 16px"
+  sign-heading-agreed:
+    backgroundColor: "transparent"
+    textColor: "{colors.signal-yellow}"
+    typography: "{typography.sign}"
+    rounded: "{rounded.control}"
+    padding: "7px 12px"
   sign-broker-review:
     backgroundColor: "transparent"
     textColor: "{colors.vermilion}"
@@ -337,6 +343,7 @@ Borders are 1px hairlines for containers and controls, 2px for emphasized signs.
 ### Tier signs
 The review tier is shown as an enamel sign, uppercase and tracked, that stamps in with a slight overshoot and a -1.5 degree settle.
 - **Fast-track review:** Signal Yellow fill, Signal Ink text, ink keyline. The one sign that earns yellow.
+- **Heading agreed:** Transparent with a doubled Signal Yellow outline and Signal Yellow text. Hollow, so it reads as partial agreement; only fast-track gets the filled yellow sign.
 - **Broker review:** Transparent with a doubled Vermilion outline and Vermilion text.
 - **Idle:** "Awaiting a run": dashed 20 percent outline, sentence case, no uppercase. Error: vermilion outline, sentence case.
 - Beside each sign sits one 14px sentence of plain explanation in Station White Dim, held to about 40 characters wide.
