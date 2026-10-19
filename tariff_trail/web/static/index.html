@@ -73,13 +73,12 @@
     <main class="stage">
       <div class="stage-bar">
         <p class="ticker" id="ticker">Ready</p>
-        <button id="fit" class="quiet" type="button" aria-pressed="false" disabled>Fit route</button>
         <p class="recorded" id="recorded" hidden></p>
       </div>
 
       <div class="mapwrap">
         <div class="map" id="map" tabindex="0" role="region"
-             aria-label="Route map of Decider forks. Scroll or drag to pan.">
+             aria-label="Route map of Decider forks. Scroll or drag to pan. Plus and minus zoom, 0 resets, F fits the route.">
           <div class="canvas" id="canvas">
             <svg class="wires" id="wires" aria-hidden="true"></svg>
             <div class="marks" id="marks"></div>
@@ -107,6 +106,12 @@
               </g>
             </svg>
           </div>
+        </div>
+        <div class="zoom" id="zoom" role="group" aria-label="Map zoom">
+          <button id="zoom-out" type="button" aria-label="Zoom out" title="Zoom out (-)" disabled>&minus;</button>
+          <button id="zoom-reset" class="level" type="button" aria-label="Reset to 100%" title="Reset to 100% (0)" disabled>100%</button>
+          <button id="zoom-in" type="button" aria-label="Zoom in" title="Zoom in (+)" disabled>+</button>
+          <button id="fit" class="fit" type="button" aria-pressed="false" title="Fit the whole route on screen (F)" disabled>Fit to screen</button>
         </div>
         <ul class="key" aria-label="Map key">
           <li><i class="k-route"></i>chosen route</li>

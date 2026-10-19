@@ -106,9 +106,6 @@ button.primary:hover { background: #ffdd4d; border-color: #ffdd4d; }
 button.primary:disabled, button.primary:disabled:hover { background: transparent; color: var(--dim); border: 1px dashed var(--faint); }
 button.primary.busy { cursor: progress; }
 button.primary.busy:disabled { background: var(--signal); color: var(--signal-ink); border: 1px solid var(--signal); opacity: 0.7; }
-button.quiet { padding: 6px 10px; font-size: 12.5px; font-weight: 600; color: var(--dim); }
-button.quiet:disabled { opacity: 0.4; }
-button.quiet[aria-pressed="true"] { color: var(--signal-ink); background: var(--signal); border-color: var(--signal); }
 .go-note { margin: 8px 0 0; font-size: 13px; color: var(--dim); }
 .go-note[hidden] { display: none; }
 body.offline #sim { background: var(--signal); color: var(--signal-ink); border-color: var(--signal); }
@@ -164,6 +161,21 @@ body.offline.nosim #play:hover { background: #ffdd4d; border-color: #ffdd4d; }
   background-size: 28px 28px; background-position: 14px 14px;
   scrollbar-width: thin; scrollbar-color: rgb(246 248 255 / 0.45) transparent;
 }
+.zoom {
+  position: absolute; right: 22px; top: 12px; z-index: 3; display: flex; overflow: hidden;
+  background: rgb(11 34 96 / 0.94); border: 1px solid var(--field); border-radius: var(--r);
+}
+.zoom button {
+  height: 34px; min-width: 34px; padding: 0 10px; border: 0; border-radius: 0; font-size: 18px; font-weight: 600; line-height: 1;
+  border-right: 1px solid var(--hair);
+}
+.zoom button:last-child { border-right: 0; }
+.zoom button:hover:not(:disabled) { background: rgb(246 248 255 / 0.12); }
+.zoom button:disabled { opacity: 0.35; }
+.zoom .level { min-width: 58px; padding: 0 8px; font: 600 12.5px var(--mono); font-variant-numeric: tabular-nums; }
+.zoom .fit { font-size: 12.5px; padding: 0 12px; }
+.zoom .fit[aria-pressed="true"] { background: var(--signal); color: var(--signal-ink); }
+.zoom .fit[aria-pressed="true"]:hover:not(:disabled) { background: #ffdd4d; }
 .map.dragging { cursor: grabbing; user-select: none; }
 .map:focus-visible { outline-offset: -3px; }
 .canvas { position: relative; transform-origin: 0 0; }
@@ -343,6 +355,8 @@ body.offline.nosim #play:hover { background: #ffdd4d; border-color: #ffdd4d; }
   .rail { border: 0; }
   .mapwrap { display: block; }
   .map { height: 62dvh; min-height: 380px; }
+  .zoom { right: 14px; }
+  .zoom button { height: 44px; min-width: 44px; }
   .stage-bar { gap: 8px 14px; }
   .board { grid-template-columns: minmax(0, 1fr); padding: 22px 18px 18px; min-height: 0; }
   .dest, .tier, .sources, .metrics, .detail { grid-column: 1; }

@@ -16,9 +16,10 @@ const SAMPLES = [
 
 // map geometry (px at zoom 1)
 const ROW = 56, COL = 470, ORIGIN_COL = 480, PAD = 44, GAP = 28, RING = 13, PLAQUE_W = 240;
+const ZOOM_MIN = 0.25, ZOOM_MAX = 2.5, ZOOM_STEP = 1.25, FIT_MAX = 1.5;
 
 const state = {
-  forks: [], origin: null, facts: "", pathIds: null, follow: true, fit: false,
+  forks: [], origin: null, facts: "", pathIds: null, follow: true, fit: false, zoom: 1,
   token: 0, running: false, t0: 0, timer: null, sweepDone: false, replay: false,
   live: false, sample: null,
 };
@@ -139,7 +140,7 @@ function render() {
   const canvas = $("canvas");
   const wires = $("wires");
   const marks = $("marks");
-  const zoom = state.fit ? fitZoom() : 1;
+  const zoom = currentZoom();
   canvas.style.zoom = zoom;
   const stableH = window.matchMedia("(max-width: 920px)").matches ? map.clientHeight : Math.min(map.clientHeight, Math.max(300, window.innerHeight - 52 - 350));
   const { W, H } = layout(map.clientWidth, stableH, zoom);
@@ -153,7 +154,7 @@ function render() {
   const o = state.origin;
   const started = state.running || state.forks.length > 0 || !!state.facts;
   $("empty").classList.toggle("gone", started);
-  $("fit").disabled = state.forks.length === 0;
+  syncZoomUi(zoom);
   if (!started) return;
 
   const ids = state.pathIds ? new Set(state.pathIds) : null;
@@ -281,29 +282,89 @@ function panAlong(forks) {
   forks.forEach((f, i) => {
     setTimeout(() => {
       if (!state.follow) return;
-      map.scrollTo({ left: Math.max(0, f.x - map.clientWidth * 0.4), top: Math.max(0, f.y - map.clientHeight / 2), behavior: "smooth" });
+      const z = currentZoom();
+      map.scrollTo({ left: Math.max(0, f.x * z - map.clientWidth * 0.4), top: Math.max(0, f.y * z - map.clientHeight / 2), behavior: "smooth" });
     }, i * 240);
   });
 }
 
+/* ---------------- zoom ---------------- */
+
+const clampZoom = (z) => Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, z));
+
+// Exact extent of the laid-out route at zoom 1 (layout is idempotent, so this is safe to call any time).
+function contentSize() {
+  const o = state.origin;
+  setX(o, PAD);
+  const h = place(o, PAD);
+  return { w: Math.max(o.x, ...state.forks.map((f) => f.x)) + 470, h: h + PAD };
+}
+
 function fitZoom() {
   const map = $("map");
-  const forks = state.forks;
-  if (!forks.length) return 1;
-  const maxX = Math.max(...forks.map((f) => f.x)) + 470;
-  const rows = Math.max(...forks.map((f) => f.options.length));
-  const approxH = Math.max(rows * ROW, forks.length * 30) + PAD * 2 + 140;
-  return Math.max(0.3, Math.min(1, (map.clientWidth - 12) / maxX, (map.clientHeight - 12) / Math.max(approxH, 300)));
+  if (!state.forks.length) return 1;
+  const { w, h } = contentSize();
+  return clampZoom(Math.min(FIT_MAX, (map.clientWidth - 16) / w, (map.clientHeight - 16) / h));
+}
+
+const currentZoom = () => (state.fit ? fitZoom() : state.zoom);
+
+function syncZoomUi(zoom) {
+  const has = state.forks.length > 0;
+  $("zoom-out").disabled = !has || zoom <= ZOOM_MIN + 0.001;
+  $("zoom-in").disabled = !has || zoom >= ZOOM_MAX - 0.001;
+  $("zoom-reset").disabled = !has;
+  $("zoom-reset").textContent = `${Math.round(zoom * 100)}%`;
+  $("fit").disabled = !has;
+  $("fit").setAttribute("aria-pressed", String(state.fit));
+}
+
+// Zoom keeping the point (ax, ay), in map-viewport pixels, fixed on screen.
+function zoomTo(next, ax, ay) {
+  const map = $("map");
+  if (!state.forks.length) return;
+  const old = currentZoom();
+  next = clampZoom(next);
+  if (Math.abs(next - old) < 0.001 && !state.fit) return;
+  const cx = (map.scrollLeft + ax) / old;
+  const cy = (map.scrollTop + ay) / old;
+  state.fit = false;
+  state.follow = false;
+  state.zoom = next;
+  render();
+  map.scrollLeft = cx * next - ax;
+  map.scrollTop = cy * next - ay;
+}
+
+const zoomBy = (factor) => { const m = $("map"); zoomTo(currentZoom() * factor, m.clientWidth / 2, m.clientHeight / 2); };
+
+function fitRoute() {
+  if (!state.forks.length) return;
+  state.fit = true;
+  state.follow = false;
+  render();
+  $("map").scrollTo({ left: 0, top: 0 });
+}
+
+function resetZoom() {
+  if (!state.forks.length) return;
+  state.fit = false;
+  state.zoom = 1;
+  state.follow = true;
+  render();
+  $("map").scrollTo({ left: 0, top: 0 });
+  followLatest();
 }
 
 function followLatest() {
   const map = $("map");
+  const z = currentZoom();
   const target = state.pathIds && state.forks.length
     ? state.forks.filter((f) => f.options.some((o) => state.pathIds.includes(o.id))).sort((a, b) => b.x - a.x)[0] || state.forks[state.forks.length - 1]
     : state.forks[state.forks.length - 1];
   if (!target) return;
-  const left = Math.max(0, target.x - map.clientWidth * 0.42);
-  const top = Math.max(0, target.y - map.clientHeight / 2);
+  const left = Math.max(0, target.x * z - map.clientWidth * 0.42);
+  const top = Math.max(0, target.y * z - map.clientHeight / 2);
   map.scrollTo({ left, top, behavior: REDUCED ? "auto" : "smooth" });
 }
 
@@ -610,13 +671,25 @@ function wireMap() {
   let resizeTimer;
   const rerender = () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(render, 120); };
   new ResizeObserver(rerender).observe(map);
-  $("fit").addEventListener("click", () => {
-    state.fit = !state.fit;
-    $("fit").setAttribute("aria-pressed", String(state.fit));
-    $("fit").textContent = state.fit ? "Actual size" : "Fit route";
-    state.follow = !state.fit;
-    render();
-    if (state.fit) map.scrollTo({ left: 0, top: 0 });
+  $("zoom-in").addEventListener("click", () => zoomBy(ZOOM_STEP));
+  $("zoom-out").addEventListener("click", () => zoomBy(1 / ZOOM_STEP));
+  $("zoom-reset").addEventListener("click", resetZoom);
+  $("fit").addEventListener("click", fitRoute);
+  // Ctrl/Cmd + wheel (also trackpad pinch) zooms around the cursor; a plain wheel still pans.
+  map.addEventListener("wheel", (e) => {
+    if (!e.ctrlKey && !e.metaKey) return;
+    e.preventDefault();
+    const box = map.getBoundingClientRect();
+    zoomTo(currentZoom() * Math.exp(-e.deltaY * (e.deltaMode ? 0.05 : 0.0025)), e.clientX - box.left, e.clientY - box.top);
+  }, { passive: false });
+  map.addEventListener("keydown", (e) => {
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    if (e.key === "+" || e.key === "=") zoomBy(ZOOM_STEP);
+    else if (e.key === "-" || e.key === "_") zoomBy(1 / ZOOM_STEP);
+    else if (e.key === "0") resetZoom();
+    else if (e.key === "f" || e.key === "F") fitRoute();
+    else return;
+    e.preventDefault();
   });
 }
 

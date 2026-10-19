@@ -6,6 +6,8 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- Route map zoom controls (zoom out, zoom in, reset to 100%, fit to screen) on the map itself, plus Ctrl/Cmd+wheel or
+  trackpad pinch to zoom around the cursor and `+` / `-` / `0` / `F` keys. Fit now measures the real route extent.
 - `tariff_trail/strands_kit.py`: the pattern for any Strands agent, a `decision_tool` and a domain-free
   `DecisionGate` (`InterventionHandler`: Deny unknown items, Guide undecided ones, Confirm below the auto bar).
 - `examples/tool_catalog/agent.py`: the 48-tool router as a gated Strands agent, with recorded runs above and below the bar.
