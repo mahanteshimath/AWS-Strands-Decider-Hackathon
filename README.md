@@ -24,10 +24,11 @@ Amazon Bedrock call choosing among *real* codes. It cannot invent a code, and it
 
 <!-- TODO at submission: add the public video and the Builder Center article links to this row. -->
 
-<img src="docs/images/demo.png" alt="TariffTrail demo: Decider's calibrated probability at each fork while classifying an Anubis costume" width="520">
+<a href="docs/images/app.png"><img src="docs/images/app.png" alt="TariffTrail demo: a route map of Strands Decider's calibrated probability at each fork while classifying an Anubis costume to 9505.90.60.00" width="860"></a>
 
-<sub>Real recorded run (CBP ruling N357194). Every bar is Strands Decider's probability at that fork;
-red is <code>none_of_these</code>. <a href="https://main.d3o5ktn9yc15oj.amplifyapp.com/">Replay 392 more runs in the hosted demo.</a></sub>
+<sub>Real recorded run (CBP ruling N357194). Each stop on the route map is one Decider call; every branch is
+labelled with its probability at that fork. The yellow line is the chosen route and the dotted red branch is
+<code>none_of_these</code>. <a href="https://main.d3o5ktn9yc15oj.amplifyapp.com/">Replay 392 more runs in the hosted demo.</a></sub>
 
 </div>
 
