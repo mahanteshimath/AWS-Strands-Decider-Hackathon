@@ -1,9 +1,13 @@
 # Decision pattern: Calibrated Tree Descent
 
 **Reusable code:** [`tariff_trail/tree_descent.py`](tariff_trail/tree_descent.py) (one file; it needs only
-the `urllib` Decider client in [`tariff_trail/decider.py`](tariff_trail/decider.py)).
+the `urllib` Decider client in [`tariff_trail/decider.py`](tariff_trail/decider.py), so both files use the
+standard library alone and can be copied into any project).
+**Strands wiring for any domain:** [`tariff_trail/strands_kit.py`](tariff_trail/strands_kit.py): a tool that
+decides and an `InterventionHandler` that guards the action ([below](#wiring-it-into-any-strands-agent)).
 **Used here for:** US tariff classification (11,516 decisions, 18,946 final codes).
-**Reused for:** routing a request to one of 48 tools ([`examples/tool_catalog`](examples/tool_catalog)).
+**Reused for:** routing a request to one of 48 tools, with and without a Strands agent
+([`examples/tool_catalog`](examples/tool_catalog)).
 
 ## The problem it solves
 
@@ -97,7 +101,7 @@ result = CalibratedTreeDescent(tree, Decider(), policy=Policy(auto=0.6)).descend
 result.leaf, result.p, result.auto        # chosen tool, its path probability, and whether to call it unasked
 ```
 
-For a large tree, implement the four-method `Tree` protocol (`root_id`, `child_ids`, `option_text`,
+For a large tree, implement the `Tree` protocol (`root_id` plus four methods: `child_ids`, `option_text`,
 `path_text`, `is_terminal`) over your own data, as [`tariff_trail/hts/tree.py`](tariff_trail/hts/tree.py)
 does for the HTS. Optional hooks:
 
@@ -106,11 +110,39 @@ does for the HTS. Optional hooks:
 - `on_shortlist(tree, [(leaf, p)], facts) -> leaf` lets an LLM choose among the top complete paths.
 - `on_missing(tree, node, fact, description, facts) -> text | None` asks a person or a tool for a fact.
 
+## Wiring it into any Strands agent
+
+[`tariff_trail/strands_kit.py`](tariff_trail/strands_kit.py) packages the agent side for any tree:
+
+```python
+from strands import Agent
+from tariff_trail.strands_kit import DecisionGate, DecisionLedger, decision_tool
+
+descent = CalibratedTreeDescent(tree, Decider(), policy=Policy(auto=0.6))
+ledger = DecisionLedger()
+agent = Agent(
+    tools=[decision_tool(descent, ledger, name="choose_tool"), run_tool],
+    interventions=[DecisionGate(descent, ledger, guarded={"run_tool": "tool_id"}, decide_tool="choose_tool")],
+)
+```
+
+| Before a guarded tool call | Strands action |
+|---|---|
+| The argument is not a leaf of the tree | `Deny` |
+| The descent did not choose it in this session | `Guide` ("decide first") |
+| Its path probability is below `Policy.auto` | `Confirm`: Strands pauses the agent until a person answers |
+| Otherwise | `Proceed` |
+
+The decision tool tells the LLM what was chosen but not whether it is safe to act on. That is
+deliberate: when it did, Nova Pro sometimes asked the user itself and sometimes would not have, so
+the policy depended on the model. With the gate, it is plain code and the threshold you measured.
+Recorded runs of both paths: [`examples/tool_catalog/README.md`](examples/tool_catalog/README.md).
+
 ## Guarding the action: `ClassificationGate`
 
 The decision is only half of the pattern. The other half is what the agent may *do* with it.
-[`tariff_trail/gate.py`](tariff_trail/gate.py) is a Strands `InterventionHandler` on the tool that has
-consequences (here `file_entry`):
+[`tariff_trail/gate.py`](tariff_trail/gate.py) is TariffTrail's domain version of `DecisionGate`, a Strands
+`InterventionHandler` on the tool that has consequences (here `file_entry`):
 
 | Check | Strands action |
 |---|---|

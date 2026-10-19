@@ -38,8 +38,8 @@ red is <code>none_of_these</code>. <a href="https://main.d3o5ktn9yc15oj.amplifya
 | **A hard, real problem** | Since US *de minimis* was suspended (29 Aug 2025), every import needs a 10-digit HTS code, even a $20 parcel. The schedule has **18,946 final codes**. |
 | **LLMs are bad at it** | Asked directly, Amazon Nova Pro got **0.3%** right and **90.7%** of its answers were codes that do not exist. |
 | **Agents loop** | A Strands agent with HTS search tools got 19.0% at ~9,800 tokens a product; one uncapped run made 201 tool calls and burned 19.6 M tokens on a single item. |
-| **This works better, cheaper, safer** | **36.7%** exact 10-digit (CI 31.7–42.1), **0%** invented codes, **1,258** Bedrock tokens per product, and a human confirms every filing. |
-| **The idea is reusable** | The tariff tree is just one tree. [`tree_descent.py`](tariff_trail/tree_descent.py) is a single file you can point at any decision tree: tools, runbooks, ticket routing, ICD codes. |
+| **This works better, cheaper, safer** | **36.7%** exact 10-digit (CI 31.7–42.1), **0%** invented codes, **$1.73 per 1,000 products** against the agent's $8.93, and a human confirms every filing. |
+| **The idea is reusable** | The tariff tree is just one tree. [`tree_descent.py`](tariff_trail/tree_descent.py) is a single standard-library file you can point at any decision tree (tools, runbooks, ticket routing, ICD codes), and [`strands_kit.py`](tariff_trail/strands_kit.py) wires it into any Strands agent behind a gate. |
 
 ## Contents
 
@@ -126,6 +126,36 @@ TariffTrail vs the LLM agent on the same rulings: 92 products only TariffTrail g
 (exact McNemar p = 1.3 × 10⁻⁷), with 7.8× fewer Bedrock tokens. For scale, the ATLAS benchmark
 ([arXiv 2509.18400](https://arxiv.org/abs/2509.18400)) reports 25% at 10 digits for GPT-5-Thinking on a different HTS test set.
 
+![Accuracy against cost per 1,000 products](docs/images/accuracy-vs-cost.png)
+
+**Cost per 1,000 products** at us-east-1 list price: TariffTrail **$1.73** ($1.12 of Bedrock tokens plus $0.60 of
+g6.xlarge time, one product at a time), the LLM agent **$8.93**. Breakdown in
+[`eval/RESULTS.md`](eval/RESULTS.md#cost-per-1000-products).
+
+### What each part contributes
+
+A post-hoc ablation on the same 332 products keeps every recorded Decider search and the same Bedrock prompt, and
+changes only the shortlist Bedrock picks from ([`eval/ABLATION.md`](eval/ABLATION.md)):
+
+![Ablation: shortlist sources and accuracy](docs/images/ablation.png)
+
+- **Neither source is enough alone.** Decider's top 3 gives 31.9%; retrieval's top 4 gives 33.1%; together, 36.7%.
+- **Decider wins the heading.** Against the best design without Decider (retrieval + the same Bedrock pick),
+  TariffTrail is ahead at 4 digits (57.5% vs 51.2%, p = 0.015). At 10 digits its lead (36.7% vs 33.1%, p = 0.2) is
+  within noise; re-running the frozen step alone moves accuracy by a point.
+- **Decider reaches codes retrieval cannot.** 22% of the test products have a code that none of the 7,024 indexed
+  rulings (Oct 2021 to Dec 2025) uses. Retrieval can never propose those; the tree walk had 16 of them in its top 3 and
+  TariffTrail got 13 right.
+- **The next lever is the final pick.** A wider shortlist holds the answer 56% of the time, yet Bedrock's pick stays
+  at 36%.
+
+### Which answers to trust
+
+![Accuracy of the products reviewed first, ordered by agreement](docs/images/review-tiers.png)
+
+When Decider, Bedrock and past rulings all name the same code (16% of products), it is right 76% of the time,
+against 29% for the rest. TariffTrail uses that to order the broker's queue, never to skip the broker.
+
 **Latency.** The frozen run used a CPU host: 2.5 s per Decider call, 61 s per product. A replication of the same 332
 products on a g6.xlarge GPU (NVIDIA L4) measured **72 ms per Decider call and 2.6 s per product (p50), 3.3 s (p95)**,
 with accuracy unchanged within noise (37.4% vs 36.7%). The GPU run is a replication, not the frozen headline; details in
@@ -133,7 +163,8 @@ with accuracy unchanged within noise (37.4% vs 36.7%). The GPU run is a replicat
 
 **A second domain with the same pattern code.** Routing requests to 1 of 48 tools across 8 services: 23 of 24 correct,
 all 17 confident calls right, and the single miss was held for the user
-([`examples/tool_catalog/RESULTS.md`](examples/tool_catalog/RESULTS.md)).
+([`examples/tool_catalog/RESULTS.md`](examples/tool_catalog/RESULTS.md)). The same example runs as a Strands agent
+whose tool calls go through the gate ([`examples/tool_catalog/README.md`](examples/tool_catalog/README.md)).
 
 ## Quickstart
 
@@ -160,7 +191,7 @@ Or just open the hosted replay-only copy: **https://main.d3o5ktn9yc15oj.amplifya
 ### 2. Run the tests (offline)
 
 ```bash
-uv run pytest      # 12 tests; the ones that need the HTS data skip until you run data/fetch_hts.py
+uv run pytest      # 17 tests; the ones that need the HTS data skip until you run data/fetch_hts.py
 ```
 
 ### 3. Classify live (needs Strands Decider 2B and AWS Bedrock)
@@ -206,8 +237,25 @@ print(result.leaf, result.p, result.auto)   # chosen leaf, its path probability,
 ```
 
 Optional hooks (`seed`, `on_shortlist`, `on_missing`) add retrieval, an LLM shortlist chooser, and "ask for the missing
-fact". For a large tree, implement the five-method `Tree` protocol over your own data, as
-[`tariff_trail/hts/tree.py`](tariff_trail/hts/tree.py) does for the HTS.
+fact". For a large tree, implement the `Tree` protocol over your own data, as
+[`tariff_trail/hts/tree.py`](tariff_trail/hts/tree.py) does for the HTS. Both files use only the standard library.
+
+To put it in a Strands agent, give the agent a tool that decides and a gate on the tool that acts:
+
+```python
+from strands import Agent
+from tariff_trail.strands_kit import DecisionGate, DecisionLedger, decision_tool
+
+descent = CalibratedTreeDescent(tree, Decider(), policy=Policy(auto=0.6))
+ledger = DecisionLedger()
+agent = Agent(
+    tools=[decision_tool(descent, ledger, name="choose_tool"), run_tool],
+    interventions=[DecisionGate(descent, ledger, guarded={"run_tool": "tool_id"}, decide_tool="choose_tool")],
+)
+# run_tool(tool_id=...) is denied for unknown ids, sent back if not decided, and paused for a person below p = 0.6
+```
+
+Recorded runs of both paths, above and below the bar: [`examples/tool_catalog/README.md`](examples/tool_catalog/README.md).
 
 > **Measure before you automate.** Path probability was a perfect gate on a 48-tool catalog (17/17) and only
 > modestly predictive on the 8-level tariff tree (AUROC 0.63). [PATTERN.md](PATTERN.md#how-to-tune-it) shows how to
@@ -221,6 +269,8 @@ python data/audit_eval.py                                    # inspect the evalu
 python eval/run_eval.py --system llm_direct   --split test   # also: knn, llm_agent, decider_only
 python eval/run_eval.py --system tariff_trail --split test   # needs Decider + Bedrock
 python eval/report.py --split test                           # tables, CIs, McNemar, threshold sweep
+python eval/ablation.py --split test                         # ablation tables from the committed results
+python eval/charts.py                                        # the charts in this README (needs matplotlib)
 python eval/latency_report.py                                # CPU vs GPU latency comparison
 ```
 
@@ -234,14 +284,15 @@ the tables above with no model access.
 |---|---|
 | [`tariff_trail/tree_descent.py`](tariff_trail/tree_descent.py) | **The reusable pattern:** best-first Calibrated Tree Descent, hooks, `DictTree` |
 | [`tariff_trail/decider.py`](tariff_trail/decider.py) | Dependency-free Strands Decider client |
+| [`tariff_trail/strands_kit.py`](tariff_trail/strands_kit.py) | **The pattern in any Strands agent:** `decision_tool` and `DecisionGate` (an `InterventionHandler`) |
 | [`tariff_trail/hts/`](tariff_trail/hts) | The HTS as a tree and the tariff question wording |
 | [`tariff_trail/precedents.py`](tariff_trail/precedents.py) | Titan embeddings of pre-2026 rulings; `HeadingSeed` |
 | [`tariff_trail/adjudicator.py`](tariff_trail/adjudicator.py) | One Bedrock call over the top-3 shortlist |
 | [`tariff_trail/gate.py`](tariff_trail/gate.py) | `ClassificationGate`, a Strands `InterventionHandler` |
 | [`tariff_trail/agent.py`](tariff_trail/agent.py) | The Strands agent: classify, look up duty, list lines, file entry |
 | [`tariff_trail/web/`](tariff_trail/web) | Demo UI (FastAPI + Server-Sent Events) |
-| [`examples/tool_catalog/`](examples/tool_catalog) | The same pattern routing 48 tools |
-| [`eval/`](eval) · [`data/`](data) | Runner, reports, traces, results · fetchers and the leak-checked eval builder |
+| [`examples/tool_catalog/`](examples/tool_catalog) | The same pattern routing 48 tools, on its own and as a gated Strands agent |
+| [`eval/`](eval) · [`data/`](data) | Runner, reports, ablation, charts, traces, results · fetchers and the leak-checked eval builder |
 | [`infra/`](infra) | SSM-only EC2, IAM, S3, budget alert, Amplify deploy |
 | [`docs/architecture/`](docs/architecture) | The draw.io sources and exported diagrams |
 | [`video/`](video) · [`article/`](article) | Demo video source (HyperFrames) · Builder Center article |
@@ -252,6 +303,9 @@ the tables above with no model access.
   never auto-files.
 - 36.7% exact 10-digit accuracy is a real improvement over the baselines, not a solved problem. Use the fast-track tier
   (76% correct) to prioritise review, not to skip it.
+- At 10 digits, TariffTrail's lead over a retrieval shortlist plus the same Bedrock pick (36.7% vs 33.1%) is not
+  statistically significant; Decider's measured contribution is the heading and the codes retrieval cannot reach
+  ([ablation](eval/ABLATION.md)). The ablation was run after the test evaluation.
 - The evaluation descriptions were rewritten by an LLM from CBP's own text, so they are cleaner than many real
   importer descriptions.
 - Chapters 98 and 99 are out of scope. Tested on the US HTS only.
@@ -262,6 +316,7 @@ the tables above with no model access.
 Good first issues, roughly in order of impact:
 
 - [ ] Ask for the single missing fact (the `on_missing` hook) in the demo UI instead of guessing.
+- [ ] Better shortlist adjudication: a 7-code shortlist holds the answer 56% of the time, but the pick lands at 36%.
 - [ ] Evaluate on messy, real importer descriptions rather than rewritten ones.
 - [ ] Trees for other regimes: EU TARIC, UK Global Tariff, HS-6 only.
 - [ ] Wrap the classifier as an MCP server so any agent can call it.
@@ -282,6 +337,15 @@ completion does not.
 
 We measured that too: 19.0% correct, 19.0% invented codes, ~9,800 tokens a product, and one uncapped run looped
 through 201 tool calls. TariffTrail beats it on the same 332 rulings (McNemar p = 1.3 × 10⁻⁷) with 7.8× fewer tokens.
+</details>
+
+<details>
+<summary><b>Is Decider doing the work, or is it the retrieval?</b></summary>
+
+Both, and we measured it ([`eval/ABLATION.md`](eval/ABLATION.md)). With the same Bedrock pick, Decider's shortlist alone
+gives 31.9% and a retrieval-only shortlist 33.1%; together they give 36.7%. Decider is clearly better at the heading
+(57.5% vs 51.2% at 4 digits, p = 0.015) and reaches codes that no ruling in the retrieval index uses. At 10 digits the gain over
+retrieval plus Bedrock is within noise. We report that rather than hide it.
 </details>
 
 <details>

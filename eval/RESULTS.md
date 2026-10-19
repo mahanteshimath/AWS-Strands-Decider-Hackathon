@@ -103,6 +103,56 @@ the two runs; this is a replication, not a new test.
 - The correct code is among Decider's top 3 complete paths 39.2% of the time. Adding the
   nearest-ruling code to the Bedrock shortlist raised dev accuracy from 31.7% to 36.7%.
 
+## Cost per 1,000 products
+
+List prices in us-east-1 from the AWS Price List API (checked 2026-10-19): Amazon Nova Pro $0.0008
+per 1K input and $0.0032 per 1K output tokens; g6.xlarge $0.8048 per hour, charged for the measured
+time of the GPU run with one product in flight (no batching, so this is an upper bound). Token counts
+are the recorded test-run averages. Titan embeddings add under $0.02 and are left out.
+
+| System | Bedrock tokens in / out | Bedrock | GPU | **Total per 1,000 products** | 10-digit |
+|---|---|---|---|---|---|
+| LLM, direct answer | 196 / 45 | $0.30 | - | **$0.30** | 0.3% |
+| LLM agent + HTS search tools | 9,330 / 459 | $8.93 | - | **$8.93** | 19.0% |
+| Nearest past rulings | 0 | - | - | **≈ $0** | 24.4% |
+| Strands Decider only | 0 | - | $0.38 | **$0.38** | 25.3% |
+| **TariffTrail** | 1,209 / 49 | $1.12 | $0.60 | **$1.73** | **36.7%** |
+
+TariffTrail costs about a fifth of the agent per product and gets nearly twice as many codes right.
+Chart: [`docs/images/accuracy-vs-cost.png`](../docs/images/accuracy-vs-cost.png) (`python eval/charts.py`).
+
+## Ablation: what each part contributes (post-hoc)
+
+Run after the frozen test evaluation, so it changes no headline number. Every arm reuses the
+recorded Decider search and the same Bedrock prompt and model at temperature 0; only the shortlist
+Bedrock picks from changes. Full tables: [`ABLATION.md`](ABLATION.md) (`python eval/ablation.py`).
+
+| Bedrock picks from | answer on shortlist | 4-digit | **10-digit** | vs TariffTrail (only TT right / only this right) |
+|---|---|---|---|---|
+| (no Bedrock) nearest past rulings' vote | - | 38.0% | 24.4% | 53 / 12, p = 2.8 × 10⁻⁷ |
+| (no Bedrock) Decider's best path | - | 46.7% | 25.3% | 44 / 6, p = 3.2 × 10⁻⁸ |
+| Decider's top 3 | 39.2% | 52.7% | 31.9% | 24 / 8, p = 0.007 |
+| Retrieval's top 4 (no Decider) | 45.2% | 51.2% | 33.1% | 43 / 31, p = 0.2 |
+| **Decider's top 3 + the ruling vote (TariffTrail, recorded)** | 47.0% | **57.5%** | **36.7%** | - |
+| the same, re-run | 47.0% | 57.8% | 37.7% | 4 / 7, p = 0.55 |
+| Decider's top 3 + retrieval's top 4 (exploratory) | **56.3%** | 61.1% | 36.4% | 17 / 16, p = 1 |
+
+What it shows:
+
+- **Neither candidate source is enough alone.** Bedrock does significantly worse without the ruling
+  vote (31.9%, p = 0.007). Without Decider, the best no-Decider design (retrieval's top 4 plus the
+  same Bedrock pick) reaches 33.1%. TariffTrail's 3.6-point lead over it is **not** significant at 10
+  digits (p = 0.2), but its lead at the heading is (57.5% vs 51.2%, p = 0.015).
+- **They find different right answers.** Of TariffTrail's shortlist hits, 75 came only from Decider's
+  top 3 and 26 only from the ruling vote. 73 of the 332 products (22%) have a code that none of the
+  7,024 indexed rulings (Oct 2021 to Dec 2025) uses, so retrieval can never propose it. Decider's walk
+  had it in its top 3 for 16 of them, and TariffTrail got 13 right.
+- **The bottleneck is now the final pick.** A wider shortlist puts the answer within reach for 56%
+  of products, but Bedrock's pick stays at 36.4%. Better shortlist adjudication, not more candidates,
+  is the next lever; that arm was chosen after seeing test results, so it needs fresh data to confirm.
+- **Noise floor.** Re-running the frozen shortlist step gives the same code for 308 of 332 products
+  (92.8%) and 37.7% accuracy: differences of about a point are run-to-run variation.
+
 ## Second domain: tool routing (same pattern code)
 
 48 tools in 8 services, 24 hand-written requests, no LLM: 23 of 24 correct. The 17 requests with

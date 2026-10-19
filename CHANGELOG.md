@@ -6,6 +6,12 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- `tariff_trail/strands_kit.py`: the pattern for any Strands agent, a `decision_tool` and a domain-free
+  `DecisionGate` (`InterventionHandler`: Deny unknown items, Guide undecided ones, Confirm below the auto bar).
+- `examples/tool_catalog/agent.py`: the 48-tool router as a gated Strands agent, with recorded runs above and below the bar.
+- Post-hoc ablation (`eval/ablation.py`, `eval/ABLATION.md`): which shortlist source finds the answer, re-run noise, and
+  a wider exploratory shortlist.
+- Cost per 1,000 products at list price, and charts for the README and article (`eval/charts.py`, `docs/images/`).
 - Architecture diagrams as editable draw.io files (`docs/architecture/`): system overview, Calibrated Tree Descent on a
   real trace, `ClassificationGate` flow, and the AWS deployment.
 - Open-source community files: `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `SECURITY.md`, `CITATION.cff`, issue and pull
