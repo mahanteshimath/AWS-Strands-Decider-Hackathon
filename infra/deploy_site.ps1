@@ -3,13 +3,15 @@
   Rebuild the replay-only demo site and deploy it to AWS Amplify Hosting (manual zip deploy).
 
 .EXAMPLE
-  ./infra/deploy_site.ps1                       # app "tarifftrail-demo", branch main
+  ./infra/deploy_site.ps1                       # replay-only copy, app "tarifftrail-demo", branch main
+  ./infra/deploy_site.ps1 -ApiUrl https://xxxx.lambda-url.us-east-1.on.aws   # plus Classify hosted, Simulate, New product (see infra/deploy_api.ps1)
 #>
 param(
     [string]$Profile = "hackathon",
     [string]$Region = "us-east-1",
     [string]$AppName = "tarifftrail-demo",
     [string]$Branch = "main",
+    [string]$ApiUrl = "",
     [string]$Python = "python"
 )
 $ErrorActionPreference = "Continue"
@@ -18,7 +20,8 @@ $root = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)
 $common = @("--profile", $Profile, "--region", $Region)
 Set-Location $root
 
-& $Python scripts\export_static.py
+$exportArgs = @(); if ($ApiUrl) { $exportArgs = @("--api", $ApiUrl) }
+& $Python scripts\export_static.py @exportArgs
 & $Python -c "import zipfile,pathlib; r=pathlib.Path('site'); z=zipfile.ZipFile('site.zip','w',zipfile.ZIP_DEFLATED); [z.write(p,p.relative_to(r).as_posix()) for p in r.rglob('*') if p.is_file()]; z.close()"
 
 $id = aws.exe amplify list-apps @common --query "apps[?name=='$AppName'].appId | [0]" --output text

@@ -200,7 +200,9 @@ the real tariff tree, with a local keyword scorer standing in for Decider. Simul
 they show how the search moves and backtracks, not tariff answers (the stand-in reaches the right chapter on
 about a third of dev products).
 
-Or just open the hosted replay-only copy: **https://main.d3o5ktn9yc15oj.amplifyapp.com/**
+Or just open the hosted copy: **https://main.d3o5ktn9yc15oj.amplifyapp.com/**. It offers **Classify hosted**,
+**Simulate**, **New product** and the 392 recorded replays. It has no **Classify local**: that needs a Decider on your
+own machine (see the cloud copy below).
 
 ### 2. Run the tests (offline)
 
@@ -213,7 +215,7 @@ uv run pytest      # 17 tests; the ones that need the HTS data skip until you ru
 ```bash
 python data/fetch_precedents.py                               # prebuilt Titan index of 7,024 pre-2026 rulings (release asset)
 strands-decider serve StrandsAgents/strands-decider-2B-qwen3.5-v1-2610 --port 8099
-uv run uvicorn tariff_trail.web.app:app --port 8000           # the demo now offers "Classify live"
+uv run uvicorn tariff_trail.web.app:app --port 8000           # the demo now offers "Classify local"
 uv run python -m tariff_trail.agent "Classify and file: women's knitted pullover, 44% polyamide ..."
 ```
 
@@ -230,6 +232,23 @@ files are mirrored on ModelScope (`StrandsAgents/strands-decider-2B-qwen3.5-v1-2
 `python scripts/verify_decider_download.py` (ModelScope's sha256s and the checkpoint's own `MANIFEST.sha256`),
 install `strands-decider` into its own environment (`%LOCALAPPDATA%\tariff-trail\decider-venv`), then run
 `infra/decider_local.ps1`. It serves Decider offline on port 8099, so the page switches to "Decider live".
+
+**Use a hosted Decider instead (no download).** Put the key for the AWS User Group Madurai hosted Strands Decider in
+`.env` (git-ignored) as `aws_strands_decider_key=...` (or `DECIDER_API_KEY`), and the page adds a **Classify hosted**
+button next to **Classify local**. The server reads only that one setting from `.env`, adds the key to each request
+itself, and never sends it to the browser. The free tier allows 10 requests a minute and 2,000 decisions a month, so
+calls are paced to 9 a minute (a product takes about 2.5 minutes) and the page says when it is waiting. The hosted
+model is `hobson-v19`, not the `v1-2610` checkpoint the evaluation above was run on: hosted runs are labelled, and
+the 36.7% figure does not apply to them. `HOSTED_DECIDER_URL` overrides the endpoint.
+
+**The public cloud copy.** The Amplify site is static files, so the key and the work live in a small API on AWS Lambda
+(`tarifftrail-api`, a streaming Function URL via the Lambda Web Adapter; Bedrock through its IAM role, the hosted
+Decider key as a function environment variable, never in the page). Deploy it with
+`infra/deploy_api.ps1`, then `infra/deploy_site.ps1 -ApiUrl <the printed URL>`. The page falls back to recorded replays
+if the API is cold or down. Because strangers can press the buttons, the cloud copy runs with `TT_PUBLIC=1` (each visitor
+is limited to 6 hosted runs an hour, `TT_RUNS_PER_HOUR`, and a warm instance serves 2 hosted runs at once,
+`TT_CONCURRENT_RUNS`; the function's reserved concurrency is 4) and `TT_DISABLE_LOCAL=1` (no local Decider, so no
+**Classify local**). The per-visitor and pacing limits are held in memory, so they apply per warm instance.
 
 ## Use the pattern in your project
 
@@ -310,7 +329,7 @@ the tables above with no model access.
 | [`examples/tool_catalog/`](examples/tool_catalog) | The same pattern routing 48 tools, on its own and as a gated Strands agent |
 | [`notebooks/`](notebooks) | Run Decider live on a free Colab GPU: tool routing, real rulings, your own product |
 | [`eval/`](eval) · [`data/`](data) | Runner, reports, ablation, charts, traces, results · fetchers and the leak-checked eval builder |
-| [`infra/`](infra) | SSM-only EC2, IAM, S3, budget alert, Amplify deploy |
+| [`infra/`](infra) | SSM-only EC2, IAM, S3, budget alert, Lambda API and Amplify deploy |
 | [`docs/architecture/`](docs/architecture) | The draw.io sources and exported diagrams |
 | [`video/`](video) · [`article/`](article) | Demo video source (HyperFrames) · Builder Center article |
 
@@ -327,7 +346,8 @@ heading; defined after the test run) is a second, weaker signal.
 - The evaluation descriptions were rewritten by an LLM from CBP's own text, so they are cleaner than many real
   importer descriptions.
 - Chapters 98 and 99 are out of scope. Tested on the US HTS only.
-- The hosted demo is replay-only: it plays back real recorded runs and says so; it does not run Decider live.
+- The public demo has no local Decider. Its live runs use the hosted `hobson-v19` model (or the keyword stand-in), so
+  they are labelled and the 36.7% figure does not apply to them; recorded replays are the real evaluation runs.
 
 ## Ideas and roadmap
 

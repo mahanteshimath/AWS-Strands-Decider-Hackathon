@@ -61,6 +61,7 @@ h2 { margin: 0 0 8px; font: 700 15px/1.2 var(--sans); letter-spacing: 0.005em; }
 .status.live { color: var(--line); border-color: rgb(255 210 26 / 0.6); }
 .status.live .lamp { background: var(--signal); border-color: var(--signal); animation: lamp 2.4s ease-out infinite; }
 .status.off { color: var(--line); }
+.status[hidden] { display: none; }
 
 textarea, select {
   width: 100%; font: 400 14.5px/1.45 var(--sans); color: var(--line); background: var(--deeper);
@@ -100,6 +101,12 @@ button:disabled { cursor: not-allowed; transform: none; }
 .go-row button { width: 100%; font-size: 15px; padding: 14px 12px; }
 .go-row button[hidden], .samples button[hidden] { display: none; }
 body.nosim .go-row { grid-template-columns: 1fr; }
+body.hashosted .go-row #sim { grid-column: 1 / -1; }
+body.nolocal #go { display: none; }
+body.nolocal.hashosted .go-row #sim { grid-column: auto; }
+body.nolocal:not(.hashosted) .go-row { grid-template-columns: 1fr; }
+#hosted:disabled, #hosted:disabled:hover { background: transparent; color: var(--dim); border: 1px dashed var(--faint); }
+#hosted.busy:disabled { background: var(--signal); color: var(--signal-ink); border: 1px solid var(--signal); opacity: 0.7; }
 button.busy { cursor: progress; }
 button.primary { width: 100%; background: var(--signal); color: var(--signal-ink); border-color: var(--signal); font-size: 15px; padding: 14px 16px; }
 button.primary:hover { background: #ffdd4d; border-color: #ffdd4d; }
@@ -108,9 +115,11 @@ button.primary.busy { cursor: progress; }
 button.primary.busy:disabled { background: var(--signal); color: var(--signal-ink); border: 1px solid var(--signal); opacity: 0.7; }
 .go-note { margin: 8px 0 0; font-size: 13px; color: var(--dim); }
 .go-note[hidden] { display: none; }
-body.offline #sim { background: var(--signal); color: var(--signal-ink); border-color: var(--signal); }
-body.offline #sim:hover { background: #ffdd4d; border-color: #ffdd4d; }
+body.offline:not(.hosted-ready) #sim { background: var(--signal); color: var(--signal-ink); border-color: var(--signal); }
+body.offline:not(.hosted-ready) #sim:hover { background: #ffdd4d; border-color: #ffdd4d; }
 body.offline #sim.busy:disabled { opacity: 0.7; }
+body.offline.hosted-ready #hosted:not(:disabled) { background: var(--signal); color: var(--signal-ink); border-color: var(--signal); }
+body.offline.hosted-ready #hosted:not(:disabled):hover { background: #ffdd4d; border-color: #ffdd4d; }
 body.offline.nosim #play { background: var(--signal); color: var(--signal-ink); border-color: var(--signal); }
 body.offline.nosim #play:hover { background: #ffdd4d; border-color: #ffdd4d; }
 

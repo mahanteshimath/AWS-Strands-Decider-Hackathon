@@ -326,7 +326,7 @@ def aws_deployment() -> Path:
     d.text("The Decider host has no inbound ports: it is driven over SSM and reaches Bedrock and S3 through an instance role.",
            30, 44, 1200, 22, size=12, color=MUTED)
 
-    laptop = d.box(label("Developer laptop", "infra/remote.ps1 · deploy_site.ps1<br>aws CLI, profile “hackathon”"),
+    laptop = d.box(label("Developer laptop", "infra/remote.ps1 · deploy_api.ps1 · deploy_site.ps1<br>aws CLI, profile “hackathon”"),
                    30, 340, 200, 100, "grey")
 
     cloud = d.vertex("AWS Cloud · us-east-1", 270, 90, 1260, 700,
@@ -359,7 +359,11 @@ def aws_deployment() -> Path:
     budgets = d.aws_icon("budgets_2", "#7AA116", 960, 380, 64, cloud)
     d.text(label("AWS Budgets", "$50 per month alert → email"), 920, 450, 150, 40, size=11, align="center", parent=cloud)
     amplify = d.aws_icon("amplify", "#DD344C", 960, 550, 64, cloud)
-    d.text(label("AWS Amplify Hosting", "replay-only demo · 392 recorded runs"), 910, 620, 170, 40, size=11, align="center", parent=cloud)
+    d.text(label("AWS Amplify Hosting", "static page · 392 recorded runs<br>no Classify local on the public copy"), 905, 620, 180, 56, size=11, align="center", parent=cloud)
+    api = d.aws_icon("lambda", "#ED7100", 1130, 380, 64, cloud)
+    d.text(label("Lambda · tarifftrail-api", "streaming Function URL (SSE)<br>hosted key in env · per-visitor limits"), 1062, 450, 200, 56, size=11, align="center", parent=cloud)
+
+    hosted = d.box(label("Hosted Strands Decider", "AWS User Group Madurai<br>hobson-v19 · free tier"), 1560, 380, 150, 80, "green")
 
     visitors = d.vertex("Judges / visitors", 1610, 560, 44, 84,
                         f"shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fontSize=11;"
@@ -375,6 +379,12 @@ def aws_deployment() -> Path:
     d.edge(laptop, amplify, "deploy_site.ps1 (zip)", exit=(0.5, 1), entry=(0, 0.5), color="#DD344C",
            points=[(130, 840), (1150, 840), (1150, 672)])
     d.edge(amplify, visitors, "HTTPS", exit=(1, 0.5), entry=(0, 0.3), color="#DD344C")
+    d.edge(visitors, api, "Classify hosted · Simulate", exit=(0.5, 0), entry=(1, 0.85), color="#ED7100",
+           points=[(1632, 524)])
+    d.edge(api, bedrock, "Converse · embeddings", exit=(0, 0.5), entry=(1, 0.5), color="#01A88D",
+           points=[(1350, 502), (1350, 272)])
+    d.edge(api, hosted, "POST /v1/decide", exit=(1, 0.3), entry=(0, 0.5), color="#2d6a4f",
+           points=[(1500, 489), (1500, 420)])
     return d.save()
 
 

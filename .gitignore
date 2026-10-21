@@ -39,3 +39,6 @@ video/*/CLAUDE.md
 PRODUCT.md
 # Social pitch video builds (the published video lives on the hosting platform)
 brag-output*/
+
+# Lambda API build output (infra/build_lambda.py)
+build/

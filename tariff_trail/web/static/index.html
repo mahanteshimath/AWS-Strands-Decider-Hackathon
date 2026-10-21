@@ -27,6 +27,7 @@
       </header>
 
       <div class="status" id="status" role="status"><span class="lamp" aria-hidden="true"></span><span id="status-text">checking Decider&hellip;</span></div>
+      <div class="status" id="status-hosted" role="status" hidden><span class="lamp" aria-hidden="true"></span><span id="status-hosted-text"></span></div>
 
       <section class="ctl" aria-labelledby="describe-h">
         <h2 id="describe-h">Describe the product</h2>
@@ -37,7 +38,8 @@
         </div>
         <p class="sample-note" id="sample-note" hidden></p>
         <div class="go-row">
-          <button id="go" class="primary" type="button">Classify live</button>
+          <button id="go" class="primary" type="button">Classify local</button>
+          <button id="hosted" type="button" hidden title="Run the same search against the hosted Strands Decider">Classify hosted</button>
           <button id="sim" type="button" title="Run the real search with a local keyword stand-in for Decider">Simulate</button>
         </div>
         <p class="go-note" id="go-note" hidden>Decider is offline. Simulate runs the same search with a keyword stand-in for Decider, or replay a real recorded run below.</p>
@@ -148,6 +150,7 @@
     </main>
   </div>
 
+  <script src="/static/config.js"></script>
   <script src="/static/app.js"></script>
 </body>
 </html>

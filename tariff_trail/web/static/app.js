@@ -7,6 +7,25 @@ const $ = (id) => document.getElementById(id);
 const SVG = "http://www.w3.org/2000/svg";
 const REDUCED = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
+// A deployment can point the page at a remote API and at pre-exported replay files (see config.js).
+// Locally config.js is empty, so every call stays on this origin.
+const CFG = window.TARIFFTRAIL || {};
+const API = (CFG.api || "").replace(/\/$/, "");
+const replayListUrl = () => (CFG.staticReplays ? "api/replays.json" : "/api/replays");
+const replayUrl = (id) => (CFG.staticReplays ? `api/replay/${encodeURIComponent(id)}.json` : `/api/replay/${encodeURIComponent(id)}`);
+
+// Health from the API; on a deployment whose API is cold or down, fall back to the exported static copy so replays still work.
+async function getHealth() {
+  if (!API) return (await fetch(CFG.staticReplays ? "api/health.json" : "/api/health")).json();
+  try {
+    const res = await fetch(`${API}/api/health`, { signal: AbortSignal.timeout(30000) });
+    if (!res.ok) throw new Error(String(res.status));
+    return await res.json();
+  } catch (err) {
+    return (await fetch("api/health.json")).json();
+  }
+}
+
 const SAMPLES = [
   ["Sweater", "Women's knitted V-neck pullover. 44% polyamide, 21% alpaca, 21% wool, 14% metallic yarn by weight. Raglan sleeves, rib-knit cuffs and hem."],
   ["Cable", "Aviation headset cable with four individually insulated copper conductors, a 5-pin connector on one end, rated for 12 volts, used to connect a headset to a cockpit audio panel."],
@@ -21,7 +40,7 @@ const ZOOM_MIN = 0.25, ZOOM_MAX = 2.5, ZOOM_STEP = 1.25, FIT_MAX = 1.5;
 const state = {
   forks: [], origin: null, facts: "", pathIds: null, follow: true, fit: false, zoom: 1,
   token: 0, running: false, t0: 0, timer: null, sweepDone: false, replay: false,
-  live: false, sample: null,
+  live: false, hostedReady: false, waitUntil: 0, sample: null,
 };
 
 function el(tag, cls, text) {
@@ -62,6 +81,7 @@ function resetState() {
   state.sweepDone = false;
   state.follow = true;
   state.running = false;
+  state.waitUntil = 0;
   setBusy(null);  // a run cut short by a new one must not leave the controls disabled
   $("sr-trail").replaceChildren();
   $("canvas").classList.remove("done");
@@ -435,7 +455,7 @@ function renderResult(r, gold) {
   const secs = r.wall_ms ? `${(r.wall_ms / 1000).toFixed(1)} s` : "";
   $("ticker").textContent = r.simulated
     ? `${r.decider_calls ?? state.forks.length} simulated forks · ${r.backtracks || 0} wrong turns explored`
-    : `${r.decider_calls ?? state.forks.length} Decider calls${secs ? " · " + secs : ""}`;
+    : `${r.decider_calls ?? state.forks.length}${r.decider_source === "hosted" ? " hosted" : ""} Decider calls${secs ? " · " + secs : ""}`;
 
   setTimeout(() => {
     if (r.code) setCode(r.code, true);
@@ -478,6 +498,7 @@ function renderResult(r, gold) {
       add("Wrong turns explored", String(r.backtracks || 0));
     } else {
       add("Decider calls", String(r.decider_calls ?? state.forks.length));
+      if (r.decider_source === "hosted") add("Decider", "hosted v19");
       add("LLM calls", String(r.llm_calls ?? 0));
     }
     if (r.wall_ms) add("Time", `${(r.wall_ms / 1000).toFixed(1)} s`);
@@ -507,21 +528,24 @@ function startTicker(label) {
   clearInterval(state.timer);
   const tick = () => {
     const s = ((performance.now() - state.t0) / 1000).toFixed(1);
-    $("ticker").textContent = `${label} · fork ${state.forks.length} · ${s} s`;
+    const left = Math.ceil((state.waitUntil - performance.now()) / 1000);
+    const wait = left > 0 ? ` · waiting for the hosted rate limit (${left} s)` : "";
+    $("ticker").textContent = `${label} · fork ${state.forks.length} · ${s} s${wait}`;
   };
   tick();
   state.timer = setInterval(tick, 100);
 }
 
 async function classifyLive() { return runStream("live"); }
+async function classifyHosted() { return runStream("hosted"); }
 async function simulate() { return runStream("sim"); }
 
 // Disable every run control while a run is going; `btn` gets the busy look. setBusy(null) restores.
 function setBusy(btn) {
-  for (const id of ["go", "sim", "fresh"]) {
+  for (const id of ["go", "hosted", "sim", "fresh"]) {
     const b = $(id);
     b.classList.toggle("busy", b === btn);
-    b.disabled = btn ? true : id === "go" && !state.live;
+    b.disabled = btn ? true : (id === "go" && !state.live) || (id === "hosted" && !state.hostedReady);
   }
 }
 
@@ -532,7 +556,7 @@ async function newProduct() {
   const fresh = $("fresh");
   fresh.disabled = true;
   try {
-    const res = await fetch(`/api/sample?exclude=${encodeURIComponent(state.sample ? state.sample.id : "")}`);
+    const res = await fetch(`${API}/api/sample?exclude=${encodeURIComponent(state.sample ? state.sample.id : "")}`);
     if (!res.ok) throw new Error(`The server answered ${res.status}.`);
     const s = await res.json();
     state.sample = s;
@@ -554,6 +578,7 @@ async function newProduct() {
 
 async function runStream(kind) {
   const sim = kind === "sim";
+  const hosted = kind === "hosted";
   if (sim && $("facts").value.trim().length < 10 && !(await newProduct())) return;
   const facts = $("facts").value.trim();
   if (facts.length < 10) { $("facts").focus(); return; }
@@ -562,28 +587,37 @@ async function runStream(kind) {
   state.facts = facts;
   state.running = true;
   revealStage();
-  setBusy($(sim ? "sim" : "go"));
+  setBusy($(sim ? "sim" : hosted ? "hosted" : "go"));
   const token = state.token;
   if (sim) {
     const note = $("recorded");
     note.textContent = "Simulated run. A local keyword scorer answers each fork in place of Strands Decider; the tariff tree, the best-first search and its none-of-these backtracking are the real ones.";
     note.title = note.textContent;
     note.hidden = false;
+  } else if (hosted) {
+    const note = $("recorded");
+    note.textContent = "Hosted Decider run (hobson-v19 on the AWS User Group Madurai free tier, 10 requests a minute). The scores on this page were measured with the local v1 model, so read this as a live demo, not as the evaluated system.";
+    note.title = note.textContent;
+    note.hidden = false;
   }
-  startTicker(sim ? "Simulating" : "Decider live");
+  startTicker(sim ? "Simulating" : hosted ? "Hosted Decider" : "Decider live");
   render();
-  const RECOVER = sim ? "Try again, or replay a recorded run." : "Check that Decider is running, press Simulate, or replay a recorded run.";
+  const RECOVER = sim ? "Try again, or replay a recorded run."
+    : hosted ? "Check the hosted Decider status above, try Classify local, press Simulate, or replay a recorded run."
+    : "Check that Decider is running, press Simulate, or replay a recorded run.";
   let finished = false;
   const handle = (chunk) => {
     const text = chunk.replace(/^data: /, "").trim();
     if (!text) return;
     const event = JSON.parse(text);
     if (event.event === "fork") addFork(event);
+    else if (event.event === "wait") state.waitUntil = performance.now() + (event.seconds + 0.4) * 1000;
     else { finished = true; renderResult(event.event === "error" ? { ...event, message: `${event.message} ${RECOVER}` } : event, gold); }
   };
   try {
-    const response = await fetch(sim ? "/api/simulate" : "/api/classify", {
-      method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ facts }),
+    const response = await fetch(`${API}${sim ? "/api/simulate" : "/api/classify"}`, {
+      method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify(hosted ? { facts, decider: "hosted" } : { facts }),
     });
     if (!response.ok || !response.body) throw new Error(`The server answered ${response.status}.`);
     const reader = response.body.getReader();
@@ -607,6 +641,7 @@ async function runStream(kind) {
     if (token === state.token) renderResult({ event: "error", message: `${err.message || err} ${RECOVER}` });
   } finally {
     if (token === state.token) setBusy(null);
+    if (hosted) refreshHosted();
   }
 }
 
@@ -618,7 +653,7 @@ async function replay() {
   const token = state.token;
   $("play").disabled = true;
   try {
-    const res = await fetch(`/api/replay/${encodeURIComponent(id)}`);
+    const res = await fetch(replayUrl(id));
     if (!res.ok) throw new Error(`The server answered ${res.status} for that recorded run.`);
     const data = await res.json();
     if (token !== state.token) return;
@@ -652,6 +687,31 @@ function revealStage() {
 }
 
 /* ---------------- boot ---------------- */
+
+// The hosted button and its status line exist only when the server has a hosted Decider key (never on the static site).
+function applyHosted(h) {
+  const present = !!h;
+  $("hosted").hidden = !present;
+  $("status-hosted").hidden = !present;
+  document.body.classList.toggle("hashosted", present);
+  state.hostedReady = !!(h && h.ready);
+  document.body.classList.toggle("hosted-ready", state.hostedReady);
+  if (!present) return;
+  if (!state.running) $("hosted").disabled = !state.hostedReady;
+  const model = String(h.model || "").replace(/^strands-decider-(2b-)?/i, "");
+  $("status-hosted-text").textContent = h.ready ? `Hosted Decider ready, ${model} (${h.used_this_session} sent)` : "Hosted Decider unavailable";
+  $("status-hosted").title = h.ready
+    ? `${h.used_this_session} decisions sent this session. Free tier: ${h.monthly_free.toLocaleString("en-US")} a month, ${h.per_minute} requests a minute.`
+    : (h.error || "");
+  $("status-hosted").className = "status " + (h.ready ? "live" : "off");
+  $("hosted").title = h.ready
+    ? `Run the same search against the hosted Strands Decider (${model}, AWS User Group Madurai free tier, ${h.per_minute} requests a minute)`
+    : (h.error || "The hosted Decider is not reachable.");
+}
+
+async function refreshHosted() {
+  try { applyHosted((await getHealth()).hosted); } catch (err) { /* the status line keeps its last value */ }
+}
 
 function wireMap() {
   const map = $("map");
@@ -706,36 +766,70 @@ async function init() {
   $("facts").addEventListener("input", () => { if (state.sample && !goldFor($("facts").value.trim())) $("sample-note").hidden = true; });
   $("fresh").addEventListener("click", newProduct);
   $("go").addEventListener("click", classifyLive);
+  $("hosted").addEventListener("click", classifyHosted);
   $("sim").addEventListener("click", simulate);
   $("play").addEventListener("click", replay);
   wireMap();
   render();
 
+  // A deployment with no local Decider (the Amplify copy) says so up front, so the local button never flashes.
+  if (CFG.local === false) document.body.classList.add("nolocal");
+  if (API) {
+    document.body.classList.add("hashosted");
+    $("hosted").hidden = false;
+    $("hosted").disabled = true;
+    $("hosted").title = "Checking the hosted Decider";
+  }
+
+  const healthP = getHealth();
+  const listP = loadReplays();
   try {
-    const health = await (await fetch("/api/health")).json();
-    const status = $("status");
-    // The hosted copy is static files: no simulator, no sample endpoint. Show only what this server can do.
-    const canSim = !!health.simulate;
-    $("status-text").textContent = health.live ? `Decider live, ${health.decider.device}` : canSim ? "Decider offline, simulate or replay" : "Decider offline, replay only";
-    status.className = "status " + (health.live ? "live" : "off");
-    state.live = !!health.live;
-    $("sim").hidden = !canSim;
-    $("fresh").hidden = !canSim;
-    document.body.classList.toggle("nosim", !canSim);
-    $("go-note").textContent = canSim
-      ? "Decider is offline. Simulate runs the same search with a keyword stand-in for Decider, or replay a real recorded run below."
-      : "Live mode needs a running Decider. Replay a real recorded run below.";
-    $("go").disabled = !health.live;
-    $("go-note").hidden = !!health.live;
-    document.body.classList.toggle("offline", !health.live);
-    $("go").title = health.live ? "" : canSim ? "Live mode needs a running Decider. Simulate, or replay a recorded run instead." : "Live mode needs a running Decider. Replay a recorded run instead.";
-    $("release").textContent = health.hts_release ? `Tariff data: ${health.hts_release} (USITC)` : "";
+    applyHealth(await healthP);
   } catch (err) {
     $("status-text").textContent = "server unreachable";
     $("status").className = "status off";
   }
+  const featured = await listP;
+  if (featured && !state.live) replay();
+}
+
+function applyHealth(health) {
+  const status = $("status");
+  // A static copy has no simulator or sample endpoint. Show only what the server behind this page can do.
+  const canSim = !!health.simulate;
+  const hasLocal = health.local !== false;
+  document.body.classList.toggle("nolocal", !hasLocal);
+  state.live = !!health.live;
+  $("status-text").textContent = health.live ? `Decider live, ${health.decider.device}`
+    : !hasLocal ? "Live runs are offline, replay only"
+    : canSim ? "Decider offline, simulate or replay" : "Decider offline, replay only";
+  status.className = "status " + (health.live ? "live" : "off");
+  $("sim").hidden = !canSim;
+  $("fresh").hidden = !canSim;
+  document.body.classList.toggle("nosim", !canSim);
+  $("go-note").textContent = canSim
+    ? "Decider is offline. Simulate runs the same search with a keyword stand-in for Decider, or replay a real recorded run below."
+    : "Live mode needs a running Decider. Replay a real recorded run below.";
+  $("go").disabled = !health.live;
+  applyHosted(health.hosted);
+  // With no local Decider the status line is only worth showing when the hosted one is not there to report instead.
+  status.hidden = !hasLocal && state.hostedReady;
+  $("go-note").hidden = !!health.live;
+  if (state.hostedReady && !health.live) {
+    $("go-note").textContent = hasLocal
+      ? "The local Decider is offline. Classify hosted uses the hosted Decider, Simulate runs a keyword stand-in, or replay a real recorded run below."
+      : "Classify hosted runs the real search on the hosted Strands Decider, about 2 to 3 minutes a product on the free tier. Simulate is instant; or replay a recorded run below.";
+    $("go-note").hidden = false;
+  }
+  document.body.classList.toggle("offline", !health.live);
+  $("go").title = health.live ? "" : canSim ? "Live mode needs a running Decider. Simulate, or replay a recorded run instead." : "Live mode needs a running Decider. Replay a recorded run instead.";
+  $("release").textContent = health.hts_release ? `Tariff data: ${health.hts_release} (USITC)` : "";
+}
+
+// Fill the replay list; resolves to the featured ruling's id (or null) so init can auto-play it when nothing live is available.
+async function loadReplays() {
   try {
-    const list = await (await fetch("/api/replays")).json();
+    const list = await (await fetch(replayListUrl())).json();
     for (const item of list) {
       const option = el("option", null, `${item.id}: ${item.title}${item.correct ? "" : " (missed)"}`);
       option.value = item.id;
@@ -744,8 +838,8 @@ async function init() {
     if (!list.length) $("replays").append(el("option", null, "no recorded runs yet"));
     const featured = list.find((item) => item.id === "N357194");
     if (featured) $("replays").value = featured.id;
-    if (featured && $("go").disabled) replay();
-  } catch (err) { /* replay list is optional */ }
+    return featured ? featured.id : null;
+  } catch (err) { return null; /* replay list is optional */ }
 }
 
 init();

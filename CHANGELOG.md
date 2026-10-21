@@ -6,6 +6,17 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- **Classify hosted** button (`tariff_trail/hosted.py`, `tariff_trail/env.py`): the same search against the
+  AWS User Group Madurai hosted Strands Decider (`POST /v1/decide`, Bearer key from `aws_strands_decider_key` or
+  `DECIDER_API_KEY` in `.env`). The key stays on the server; calls are paced to 9 a minute across all requests
+  with retry on 429/503, and the page shows when it is waiting. Hosted runs are labelled `hobson-v19`, not the
+  `v1-2610` model the evaluation used. "Classify live" is now "Classify local".
+- Public cloud API (`infra/build_lambda.py`, `infra/deploy_api.ps1`, `tariff_trail/web/guard.py`): the FastAPI app on
+  AWS Lambda behind a streaming Function URL (Lambda Web Adapter, zip package, Bedrock via an IAM role). The Amplify site
+  now calls it, so it offers Classify hosted, Simulate and New product as well as the recorded replays, and no
+  Classify local (`TT_DISABLE_LOCAL=1`, `local: false` in `/api/health`). `TT_PUBLIC=1` limits each visitor to 6 hosted
+  runs an hour and 2 at once per instance. `infra/deploy_site.ps1 -ApiUrl` bakes the API URL into the static site,
+  which falls back to replays if the API is down.
 - Heading-agreed review tier (`tariff_trail/agreement.py`, `heading_agreed` on results, a hollow yellow
   stamp in the UI, wording in the gate's `Confirm`): Decider, Bedrock and the nearest past rulings share
   the 4-digit heading but not the full code. 17.8% of test products, 72.9% right at the heading, 50.8%

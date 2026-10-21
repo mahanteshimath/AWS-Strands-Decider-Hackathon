@@ -11,22 +11,26 @@ Simulate mode runs the same search on any product with a local keyword stand-in 
 from __future__ import annotations
 
 import json
+import os
 import queue
 import random
 import threading
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
 from ..agreement import agreed_heading
 from ..classify import TariffTrail
 from ..decider import Decider, DeciderUnavailable
+from ..hosted import HOSTED_MODEL, HostedDecider
+from ..hosted import status as hosted_status
 from ..hts.tree import load
 from ..simulate import Simulator
 from ..tree_descent import NONE_KEY, SEED_KEY
+from .guard import RunGuard
 
 ROOT = Path(__file__).resolve().parents[2]
 STATIC = Path(__file__).resolve().parent / "static"
@@ -37,9 +41,19 @@ tree = load()
 simulator = Simulator(tree)
 SIM_PACE_S = 0.45  # seconds between simulated forks, so the map can be watched
 
+# Deployment switches. A public cloud copy sets TT_DISABLE_LOCAL=1 (there is no local Decider to reach) and
+# TT_PUBLIC=1 (per-visitor limits on hosted runs, which spend a shared free-tier quota and a Bedrock call).
+LOCAL_ENABLED = os.environ.get("TT_DISABLE_LOCAL") != "1"
+GUARD = RunGuard(per_hour=int(os.environ.get("TT_RUNS_PER_HOUR", "6")), concurrent=int(os.environ.get("TT_CONCURRENT_RUNS", "2"))) \
+    if os.environ.get("TT_PUBLIC") == "1" else None
+
 
 class ClassifyRequest(BaseModel):
     facts: str = Field(min_length=10, max_length=4000)
+
+
+class LiveRequest(ClassifyRequest):
+    decider: Literal["local", "hosted"] = "local"  # which Strands Decider answers the forks
 
 
 class SimulateRequest(ClassifyRequest):
@@ -112,9 +126,34 @@ def static(name: str) -> FileResponse:
     return FileResponse(path)
 
 
+def _client(http: Request) -> str:
+    forwarded = http.headers.get("x-forwarded-for", "").split(",")[0].strip()
+    return forwarded or (http.client.host if http.client else "unknown")
+
+
+def _sse(events: queue.Queue) -> StreamingResponse:
+    def stream():
+        while (item := events.get()) is not None:
+            yield f"data: {json.dumps(item)}\n\n"
+
+    return StreamingResponse(stream(), media_type="text/event-stream")
+
+
+def _refusal(message: str) -> StreamingResponse:
+    events: queue.Queue = queue.Queue()
+    events.put({"event": "error", "message": message})
+    events.put(None)
+    return _sse(events)
+
+
 @app.get("/api/health")
 def health() -> dict[str, Any]:
-    base = {"simulate": True, "samples": len(_cases()), "hts_release": tree.release.get("description")}
+    base = {"simulate": True, "local": LOCAL_ENABLED, "samples": len(_cases()), "hts_release": tree.release.get("description")}
+    hosted = hosted_status()  # absent unless a hosted key is configured; the static site never has it
+    if hosted:
+        base["hosted"] = hosted
+    if not LOCAL_ENABLED:
+        return {**base, "live": False}
     try:
         return {**base, "live": True, "decider": Decider().health()}
     except DeciderUnavailable as exc:
@@ -122,25 +161,36 @@ def health() -> dict[str, Any]:
 
 
 @app.post("/api/classify")
-def classify(request: ClassifyRequest) -> StreamingResponse:
+def classify(request: LiveRequest, http: Request) -> StreamingResponse:
     events: queue.Queue = queue.Queue()
+    hosted = request.decider == "hosted"
+    if not hosted and not LOCAL_ENABLED:
+        return _refusal("The local Decider is not available on this server. Use Classify hosted, Simulate, or replay a recorded run.")
+    guarded = hosted and GUARD is not None
+    if guarded and (denied := GUARD.acquire(_client(http))):
+        return _refusal(denied)
 
     def work() -> None:
         try:
-            trail = TariffTrail(tree=tree, decider=Decider())
+            if hosted:
+                decider = HostedDecider(on_wait=lambda s: events.put({"event": "wait", "seconds": round(s, 1)}))
+            else:
+                decider = Decider()
+            trail = TariffTrail(tree=tree, decider=decider)
             result = trail.classify(request.facts, observe=lambda e: events.put(fork_event(e)))
-            events.put(result_event(result))
+            done = result_event(result)
+            if hosted:
+                done.update(decider_source="hosted", decider_model=HOSTED_MODEL)
+            events.put(done)
         except Exception as exc:  # surface the failure to the page instead of hanging the stream
             events.put({"event": "error", "message": str(exc)[:300]})
+        finally:
+            if guarded:
+                GUARD.release()
         events.put(None)
 
     threading.Thread(target=work, daemon=True).start()
-
-    def stream():
-        while (item := events.get()) is not None:
-            yield f"data: {json.dumps(item)}\n\n"
-
-    return StreamingResponse(stream(), media_type="text/event-stream")
+    return _sse(events)
 
 
 def sim_result_event(sim, seed: int) -> dict[str, Any]:
