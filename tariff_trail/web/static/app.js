@@ -26,11 +26,16 @@ async function getHealth() {
   }
 }
 
+// Real held-out CBP rulings, so each preset is checked against CBP's ruled code after the run.
 const SAMPLES = [
-  ["Sweater", "Women's knitted V-neck pullover. 44% polyamide, 21% alpaca, 21% wool, 14% metallic yarn by weight. Raglan sleeves, rib-knit cuffs and hem."],
-  ["Cable", "Aviation headset cable with four individually insulated copper conductors, a 5-pin connector on one end, rated for 12 volts, used to connect a headset to a cockpit audio panel."],
-  ["Stone slab", "Polished granite slabs from Brazil, 2 m by 3 m, 2 cm and 3 cm thick, cut and polished on one face, for kitchen countertops."],
-  ["Toy", "Plush stuffed toy shaped like a dinosaur, 30 cm tall, polyester outer shell and polyester fibre stuffing, for children over 3."],
+  { name: "Hinge pin", id: "N364583", title: "Steel hinge pin for KitchenAid stand mixer", gold: "7318290000",
+    facts: "The article is a precision-machined steel hinge pin, zinc-plated, headless and unthreaded. It measures approximately 3.20 inches in length and 0.373 inches in diameter, with chamfered ends and dimensional tolerances for precise fitting. The pin functions as the pivot axle for the tilt-head mechanism in a KitchenAid household stand mixer, connecting the mixer head to the lower housing to allow rotational movement between operating and service positions. It is designed to Whirlpool/KitchenAid specifications and serves as an essential component of the mixer's tilt-head mechanism. The pin is supplied individually and intended for incorporation into the specified appliance assembly." },
+  { name: "Message pen", id: "N364145", title: "Feeling Lucky Click Message Pen", gold: "9608100000",
+    facts: "The item is a retractable ballpoint pen designed for writing with black ink. It features a pink plastic barrel and includes green plastic accents and a clip. The pen has a click top mechanism that, when pressed, rotates pre-set messages visible through two clear plastic windows on either side of the barrel. Six distinct messages appear in sequence, such as 'Luck is coming your way' and 'All signs point to yes.' The pen targets users aged 14 and older and is intended for sale in art, craft, and gift shops as a novelty writing instrument. It is packaged on a blister card for retail display and distribution." },
+  { name: "Paint kit", id: "N361728", title: "DIY Canvas Painting Kit", gold: "3213100000",
+    facts: "The product is a do-it-yourself canvas painting kit intended for children ages three and above. The kit contains six acrylic paint pods in assorted colors, one paintbrush, one small canvas with a pre-outlined image, one small plastic easel, and one sheet of stickers. All components are designed to be used together for the purpose of creatively painting and decorating the canvas. The kit is supplied in a condition suitable for retail sale, packaged for direct sale to end users without the need for re-packing. The components function together to allow users to complete a painting activity." },
+  { name: "Water globe", id: "N357944", title: "Plastic Water Globe", gold: "3926400090",
+    facts: "The product is a 45-millimeter-diameter water globe constructed from polyvinyl chloride (PVC) plastic. Each globe contains a decorative marine animal figure, including varieties such as a shark, flamingo, dolphin, or sea turtle. The globes are supplied in display boxes containing twelve units each. They are intended for resale to retail customers within the souvenir industry, including locations such as beach stores, boutiques, and hotels." },
 ];
 
 // map geometry (px at zoom 1)
@@ -461,7 +466,11 @@ function renderResult(r, gold) {
     if (r.code) setCode(r.code, true);
     else { $("code").className = "digits none"; $("code").textContent = "No code reached"; }
 
+    // The review tiers were measured on the evaluated local model. A hosted v19 run reports agreement but never claims a tier.
+    const unmeasured = "The review tiers were measured on the evaluated local model, not on hosted v19, so a licensed broker reviews this code in full.";
     const tier = r.simulated ? ["sim", "Simulated", "A keyword stand-in answered each fork, not Strands Decider. It shows how the search moves and backtracks; it is not a tariff answer."]
+      : r.decider_source === "hosted" && r.fast_track ? ["heading", "Sources agree", `Decider, Bedrock and past rulings agree. ${unmeasured}`]
+      : r.decider_source === "hosted" && r.heading_agreed ? ["heading", `Heading ${r.heading_agreed} agreed`, `Decider, Bedrock and past rulings land in heading ${r.heading_agreed}, not on the same full code. ${unmeasured}`]
       : r.fast_track ? ["fast", "Fast-track review", "Decider, Bedrock and past rulings agree. A licensed broker still confirms before filing."]
       : r.heading_agreed ? ["heading", `Heading ${r.heading_agreed} agreed`, `Decider, Bedrock and past rulings all land in heading ${r.heading_agreed}, but not on the same full code. A licensed broker confirms the exact code before filing.`]
       : ["review", "Broker review", "The sources disagree, even on the heading. Full broker review before filing."];
@@ -552,20 +561,23 @@ function setBusy(btn) {
 // CBP's ruled code, when the textarea still holds the loaded real product unchanged.
 const goldFor = (facts) => (state.sample && state.sample.facts.trim() === facts ? state.sample.gold : null);
 
+function loadSample(s) {
+  state.sample = s;
+  $("facts").value = s.facts;
+  const note = $("sample-note");
+  note.replaceChildren(document.createTextNode("Real product from CBP ruling "), el("b", null, s.id),
+    document.createTextNode(` (${s.title}). Its ruled code is shown after the run.`));
+  note.hidden = false;
+  return s;
+}
+
 async function newProduct() {
   const fresh = $("fresh");
   fresh.disabled = true;
   try {
     const res = await fetch(`${API}/api/sample?exclude=${encodeURIComponent(state.sample ? state.sample.id : "")}`);
     if (!res.ok) throw new Error(`The server answered ${res.status}.`);
-    const s = await res.json();
-    state.sample = s;
-    $("facts").value = s.facts;
-    const note = $("sample-note");
-    note.replaceChildren(document.createTextNode("Real product from CBP ruling "), el("b", null, s.id),
-      document.createTextNode(` (${s.title}). Its ruled code is shown after the run.`));
-    note.hidden = false;
-    return s;
+    return loadSample(await res.json());
   } catch (err) {
     const note = $("sample-note");
     note.textContent = `Could not load a product: ${err.message || err}`;
@@ -757,10 +769,10 @@ function wireMap() {
 async function init() {
   state.origin = newOrigin();
   resetBoard();
-  for (const [name, text] of SAMPLES) {
-    const b = el("button", null, name);
+  for (const s of SAMPLES) {
+    const b = el("button", null, s.name);
     b.type = "button";
-    b.addEventListener("click", () => { $("facts").value = text; $("sample-note").hidden = true; $("facts").focus(); });
+    b.addEventListener("click", () => { loadSample(s); $("facts").focus(); });
     $("samples").append(b);
   }
   $("facts").addEventListener("input", () => { if (state.sample && !goldFor($("facts").value.trim())) $("sample-note").hidden = true; });
