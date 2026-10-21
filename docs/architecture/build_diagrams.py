@@ -363,7 +363,7 @@ def aws_deployment() -> Path:
     api = d.aws_icon("lambda", "#ED7100", 1130, 380, 64, cloud)
     d.text(label("Lambda · tarifftrail-api", "streaming Function URL (SSE)<br>hosted key in env · per-visitor limits"), 1062, 450, 200, 56, size=11, align="center", parent=cloud)
 
-    hosted = d.box(label("Hosted Strands Decider", "AWS User Group Madurai<br>hobson-v19 · free tier"), 1560, 380, 150, 80, "green")
+    hosted = d.box(label("Hosted Strands Decider", "AWS User Group Madurai<br>hosted build · free tier"), 1560, 380, 150, 80, "green")
 
     visitors = d.vertex("Judges / visitors", 1610, 560, 44, 84,
                         f"shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fontSize=11;"

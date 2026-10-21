@@ -1,19 +1,22 @@
 # TariffTrail: Strands Decider 2B walks the US tariff tree so the agent never invents a customs code
 
 *18,946 doors and one key. Built for the AWS Builder Center "Agent Experience Hackathon: Strands Decider".
-Tags: `#strands-decider-2b` `#policy`. Code (Apache-2.0): github.com/mahanteshimath/AWS-Strands-Decider-Hackathon*
+Tags: `#strands-decider-2b` `#policy` `#tool-selection`. Code (Apache-2.0): github.com/mahanteshimath/AWS-Strands-Decider-Hackathon*
 
 **Decision pattern demonstrated: Policy.** Before the agent may file a customs entry, Strands Decider 2B
 classifies the product into its tariff category, one calibrated `choice` per level of the official
 tree, and that decision sets what the agent is allowed to do next (deny, send back, or hand to a broker).
-The same recipe also does **tool selection** over a 48-tool catalog.
+The same recipe also does **tool selection** over a 48-tool catalog, where its calibrated confidence is
+safe to act on: all 17 requests above the bar were routed right, and the one miss scored below it, so the
+agent asked a person first.
 
 > **TL;DR.** Every US import now needs a 10-digit tariff code. Asked directly, an LLM invents a code
 > that does not exist 91% of the time, and a tool-using agent gets 19% right. **TariffTrail** lets
 > Strands Decider 2B walk the official tariff tree one calibrated choice at a time, then spends one
 > short Amazon Bedrock call choosing among *real* codes. On 332 held-out 2026 customs rulings it gets
 > **36.7% exactly right with zero invented codes, at $1.73 per 1,000 products against the agent's
-> $8.93**, and a broker confirms every filing. The decision pattern, **Calibrated Tree Descent**, is one
+> $8.93**, and a broker confirms every filing. For scale, the ATLAS benchmark reports 25% at 10 digits
+> for GPT-5-Thinking on its own tariff test set. The decision pattern, **Calibrated Tree Descent**, is one
 > standard-library file plus a Strands gate, and the same code routes requests across 48 tools.
 
 **[▶ Watch the 3-minute video](https://youtu.be/aU4kPYgsOcY)** · **[Try the live demo](https://main.d3o5ktn9yc15oj.amplifyapp.com/)** ·
@@ -316,7 +319,7 @@ route, not the forks the search tried and abandoned):
   any of the 392 evaluation rulings re-run live, and your own product)
 - **Demo (Classify hosted, Simulate, and 392 recorded real classifications):** https://main.d3o5ktn9yc15oj.amplifyapp.com/
   The 392 replays are the evaluated runs. **Classify hosted** runs your product live on the AWS User Group
-  Madurai hosted Decider, a newer build (`hobson-v19`) than the `v1-2610` checkpoint measured above, at
+  Madurai hosted strands-decider-2B, a newer build than the `v1-2610` checkpoint measured above, at
   its free tier of 10 requests a minute (one to two and a half minutes a product), so read it as a live
   demo, not as the evaluated system. **Simulate** shows the same search with a keyword stand-in for Decider.
 - **Code and the reusable pattern:** github.com/mahanteshimath/AWS-Strands-Decider-Hackathon, `PATTERN.md`

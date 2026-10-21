@@ -248,8 +248,8 @@ install `strands-decider` into its own environment (`%LOCALAPPDATA%\tariff-trail
 button next to **Classify local**. The server reads only that one setting from `.env`, adds the key to each request
 itself, and never sends it to the browser. The free tier allows 10 requests a minute and 2,000 decisions a month, so
 calls are paced to 9 a minute (a product takes about 2.5 minutes) and the page says when it is waiting. The hosted
-model is `hobson-v19`, not the `v1-2610` checkpoint the evaluation above was run on: hosted runs are labelled, and
-the 36.7% figure does not apply to them. `HOSTED_DECIDER_URL` overrides the endpoint.
+model is a hosted build of strands-decider-2B, not the `v1-2610` checkpoint the evaluation above was run on: hosted
+runs are labelled, and the 36.7% figure does not apply to them. `HOSTED_DECIDER_URL` overrides the endpoint.
 
 **The public cloud copy.** The Amplify site is static files, so the key and the work live in a small API on AWS Lambda
 (`tarifftrail-api`, a streaming Function URL via the Lambda Web Adapter; Bedrock through its IAM role, the hosted
@@ -357,8 +357,9 @@ heading; defined after the test run) is a second, weaker signal.
 - The evaluation descriptions were rewritten by an LLM from CBP's own text, so they are cleaner than many real
   importer descriptions.
 - Chapters 98 and 99 are out of scope. Tested on the US HTS only.
-- The public demo has no local Decider. Its live runs use the hosted `hobson-v19` model (or the keyword stand-in), so
-  they are labelled and the 36.7% figure does not apply to them; recorded replays are the real evaluation runs.
+- The public demo has no local Decider. Its live runs use a hosted build of strands-decider-2B, not the evaluated
+  `v1-2610` checkpoint (or the keyword stand-in), so they are labelled and the 36.7% figure does not apply to them;
+  recorded replays are the real evaluation runs.
 
 ## Ideas and roadmap
 

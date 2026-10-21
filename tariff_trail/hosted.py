@@ -6,7 +6,7 @@
 The wire format differs from a local `strands-decider serve`: `POST /v1/decide` with
 `Authorization: Bearer <key>`. The free tier allows 10 requests a minute, 4 questions per request
 and 2,000 decisions a month, so calls are paced by a limiter shared across every request in the
-process, and the model is `hobson-v19`, not the local `v1-2610` the evaluation was run on.
+process, and the model is a hosted build of strands-decider-2B, not the local `v1-2610` the evaluation was run on.
 """
 
 from __future__ import annotations
