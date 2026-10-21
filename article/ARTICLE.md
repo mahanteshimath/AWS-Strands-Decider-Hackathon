@@ -221,6 +221,6 @@ files by `eval/report.py`, `eval/ablation.py` and `eval/charts.py`.
 - **Demo (Classify hosted, Simulate, and 392 recorded real classifications):** https://main.d3o5ktn9yc15oj.amplifyapp.com/
 - **Code and the reusable pattern:** github.com/mahanteshimath/AWS-Strands-Decider-Hackathon, `PATTERN.md`
 - **The pattern in a Strands agent:** `examples/tool_catalog/agent.py`
-- **Video (2 minutes):** VIDEO_URL_HERE
+- **Video (3 minutes):** https://youtu.be/aU4kPYgsOcY
 
 *Decision support, not legal advice: a licensed customs broker is responsible for every entry.*
