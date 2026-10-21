@@ -13,6 +13,9 @@ const CFG = window.TARIFFTRAIL || {};
 const API = (CFG.api || "").replace(/\/$/, "");
 const replayListUrl = () => (CFG.staticReplays ? "api/replays.json" : "/api/replays");
 const replayUrl = (id) => (CFG.staticReplays ? `api/replay/${encodeURIComponent(id)}.json` : `/api/replay/${encodeURIComponent(id)}`);
+// A link such as #run=N357194 opens that recorded run; replaying a run puts its link in the address bar.
+const hashRun = () => (/^#run=([A-Za-z0-9]+)$/.exec(location.hash) || [])[1] || null;
+const setRunHash = (id) => history.replaceState(null, "", id ? `#run=${id}` : location.pathname + location.search);
 
 // Health from the API; on a deployment whose API is cold or down, fall back to the exported static copy so replays still work.
 async function getHealth() {
@@ -91,6 +94,7 @@ function resetState() {
   $("sr-trail").replaceChildren();
   $("canvas").classList.remove("done");
   $("recorded").hidden = true;
+  if (hashRun()) setRunHash(null);  // the link names a recorded run, not whatever runs next
   resetBoard();
   render();
 }
@@ -673,6 +677,7 @@ async function replay() {
     state.facts = data.facts;
     state.running = true;
     state.replay = true;
+    setRunHash(data.id);
     const note = $("recorded");
     note.textContent = `Recorded run, ruling ${data.id} (${data.title}). Replayed from the evaluation results; the map shows the ${data.forks.length} forks along the winning path, and timings are the original run's.`;
     note.hidden = false;
@@ -795,8 +800,9 @@ async function init() {
     $("hosted").title = "Checking the hosted Decider";
   }
 
+  const linked = hashRun();
   const healthP = getHealth();
-  const listP = loadReplays();
+  const listP = loadReplays(linked);
   try {
     applyHealth(await healthP);
   } catch (err) {
@@ -804,7 +810,13 @@ async function init() {
     $("status").className = "status off";
   }
   const featured = await listP;
-  if (featured && !state.live) replay();
+  if (featured && (!state.live || featured === linked)) replay();
+  window.addEventListener("hashchange", () => {
+    const id = hashRun();
+    if (!id || ![...$("replays").options].some((o) => o.value === id)) return;
+    $("replays").value = id;
+    replay();
+  });
 }
 
 function applyHealth(health) {
@@ -840,8 +852,8 @@ function applyHealth(health) {
   $("release").textContent = health.hts_release ? `Tariff data: ${health.hts_release} (USITC)` : "";
 }
 
-// Fill the replay list; resolves to the featured ruling's id (or null) so init can auto-play it when nothing live is available.
-async function loadReplays() {
+// Fill the replay list; resolves to the linked (#run=) or featured ruling's id, or null, so init can auto-play it.
+async function loadReplays(wanted) {
   try {
     const list = await (await fetch(replayListUrl())).json();
     for (const item of list) {
@@ -850,7 +862,7 @@ async function loadReplays() {
       $("replays").append(option);
     }
     if (!list.length) $("replays").append(el("option", null, "no recorded runs yet"));
-    const featured = list.find((item) => item.id === "N357194");
+    const featured = list.find((item) => item.id === wanted) || list.find((item) => item.id === "N357194");
     if (featured) $("replays").value = featured.id;
     return featured ? featured.id : null;
   } catch (err) { return null; /* replay list is optional */ }

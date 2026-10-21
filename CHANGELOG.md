@@ -6,6 +6,9 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- Links to recorded runs: `#run=<ruling>` (for example `#run=N361497`) opens the demo on that run and plays it, and
+  replaying any run puts its link in the address bar. `docs/images/route-map.gif` is a real replay for the README and
+  the article.
 - **Classify hosted** button (`tariff_trail/hosted.py`, `tariff_trail/env.py`): the same search against the
   AWS User Group Madurai hosted Strands Decider (`POST /v1/decide`, Bearer key from `aws_strands_decider_key` or
   `DECIDER_API_KEY` in `.env`). The key stays on the server; calls are paced to 9 a minute across all requests

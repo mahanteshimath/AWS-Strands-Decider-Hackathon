@@ -15,6 +15,7 @@ Amazon Bedrock call choosing among *real* codes. It cannot invent a code, and it
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/mahanteshimath/AWS-Strands-Decider-Hackathon/blob/main/notebooks/try_tarifftrail.ipynb)
 [![Hackathon](https://img.shields.io/badge/AWS%20Builder%20Center-Strands%20Decider-ff9900.svg)](#hackathon)
 
+**[▶ Video (2:59)](https://youtu.be/aU4kPYgsOcY)** ·
 **[Live demo](https://main.d3o5ktn9yc15oj.amplifyapp.com/)** ·
 **[Run it on a free GPU](https://colab.research.google.com/github/mahanteshimath/AWS-Strands-Decider-Hackathon/blob/main/notebooks/try_tarifftrail.ipynb)** ·
 **[The reusable pattern](PATTERN.md)** ·
@@ -22,13 +23,18 @@ Amazon Bedrock call choosing among *real* codes. It cannot invent a code, and it
 **[Results](#results)** ·
 **[Quickstart](#quickstart)**
 
-<!-- TODO at submission: add the public video and the Builder Center article links to this row. -->
+<!-- TODO at submission: add the Builder Center article link to this row once it is published. -->
 
-<a href="docs/images/app.png"><img src="docs/images/app.png" alt="TariffTrail demo: a route map of Strands Decider's calibrated probability at each fork while classifying an Anubis costume to 9505.90.60.00" width="860"></a>
+<a href="https://main.d3o5ktn9yc15oj.amplifyapp.com/#run=N361497"><img src="docs/images/route-map.gif" alt="TariffTrail demo: Strands Decider walks the US tariff tree one fork at a time, with a probability on every branch, and lands a hardcover book on 4901.99.00.70, the exact 10-digit code CBP ruled, with a fast-track review stamp" width="860"></a>
 
-<sub>Real recorded run (CBP ruling N357194). Each stop on the route map is one Decider call; every branch is
-labelled with its probability at that fork. The yellow line is the chosen route and the dotted red branch is
-<code>none_of_these</code>. <a href="https://main.d3o5ktn9yc15oj.amplifyapp.com/">Replay 392 more runs in the hosted demo.</a></sub>
+<sub>A real recorded run (CBP ruling N361497, a hardcover book). Each stop on the route map is one Decider call;
+every branch is labelled with its probability at that fork. The yellow line is the chosen route and each dotted red
+branch is <code>none_of_these</code>. It ends on <code>4901.99.00.70</code>, CBP's own answer, with Decider, Bedrock and past
+rulings in agreement. <a href="https://main.d3o5ktn9yc15oj.amplifyapp.com/#run=N361497">Replay this run</a>, or any
+of 392 others, in the hosted demo.</sub>
+
+<a href="https://youtu.be/aU4kPYgsOcY"><img src="https://img.youtube.com/vi/aU4kPYgsOcY/maxresdefault.jpg" alt="Watch the TariffTrail video on YouTube (2 minutes 59 seconds)" width="420"></a><br>
+<sub>▶ The 3-minute video: the problem, the pattern, a live run and the results.</sub>
 
 </div>
 
@@ -202,7 +208,8 @@ about a third of dev products).
 
 Or just open the hosted copy: **https://main.d3o5ktn9yc15oj.amplifyapp.com/**. It offers **Classify hosted**,
 **Simulate**, **New product** and the 392 recorded replays. It has no **Classify local**: that needs a Decider on your
-own machine (see the cloud copy below).
+own machine (see the cloud copy below). Any recorded run has its own link, `#run=<ruling>`: for example
+[a car alarm that Decider files as radio remote-control apparatus](https://main.d3o5ktn9yc15oj.amplifyapp.com/#run=N359480).
 
 ### 2. Run the tests (offline)
 

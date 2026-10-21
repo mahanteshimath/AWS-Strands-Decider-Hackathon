@@ -11,7 +11,14 @@ Tags: `#strands-decider-2b` `#policy`. Code (Apache-2.0): github.com/mahanteshim
 > $8.93**, and a broker confirms every filing. The decision pattern, **Calibrated Tree Descent**, is one
 > standard-library file plus a Strands gate, and the same code routes requests across 48 tools.
 
-![Accuracy against cost per 1,000 products](https://raw.githubusercontent.com/mahanteshimath/AWS-Strands-Decider-Hackathon/main/docs/images/accuracy-vs-cost.png)
+**[▶ Watch the 3-minute video](https://youtu.be/aU4kPYgsOcY)** · **[Try the live demo](https://main.d3o5ktn9yc15oj.amplifyapp.com/)** ·
+**[Code and the reusable pattern](https://github.com/mahanteshimath/AWS-Strands-Decider-Hackathon)**
+
+![TariffTrail classifying a hardcover book: a route map of Strands Decider's probability at every fork, ending on code 4901.99.00.70](https://raw.githubusercontent.com/mahanteshimath/AWS-Strands-Decider-Hackathon/main/docs/images/route-map.gif)
+
+*A real recorded run, CBP ruling N361497. Each stop is one Decider call, each branch is labelled
+with its probability, and each dotted red branch is `none_of_these`. It lands on `4901.99.00.70`,
+the code CBP ruled. [Replay this run](https://main.d3o5ktn9yc15oj.amplifyapp.com/#run=N361497).*
 
 The whole pattern, in any Strands agent:
 
@@ -128,6 +135,8 @@ Test split: 332 held-out 2026 rulings, run once with the configuration frozen on
 Cost is us-east-1 list price from the AWS Price List API: Nova Pro tokens as recorded, plus
 g6.xlarge GPU time as measured with one product at a time.
 
+![Accuracy against cost per 1,000 products](https://raw.githubusercontent.com/mahanteshimath/AWS-Strands-Decider-Hackathon/main/docs/images/accuracy-vs-cost.png)
+
 - **Accuracy:** nearly double the tool-using agent at 10 digits. On the same rulings, 92 were right
   only for TariffTrail and 33 only for the agent (exact McNemar p = 1.3 × 10⁻⁷). The tuning estimate
   was also 36.7%.
@@ -175,9 +184,10 @@ again, unchanged, on a g6.xlarge with an NVIDIA L4:
 | 10-digit accuracy | 36.7% | 37.4% |
 
 The accuracy gap is run-to-run noise (same final code on 300 of 332 products), not a GPU advantage.
-The point is the shape: a calibrated decision at 72 ms is cheap enough to ask 18 times, and
-most of the 2.6 seconds is the single Bedrock call, not the walk through 18,946 codes. At list
-price that GPU time costs $0.60 per 1,000 products, about half of what the one Bedrock call costs.
+The point is the shape: a calibrated decision at 72 ms is cheap enough to ask 18 times. The whole
+walk through 18,946 codes takes about 1.7 of those 2.6 seconds, and the one Bedrock call most of
+the rest. At list price that GPU time costs $0.60 per 1,000 products, about half of what the one
+Bedrock call costs.
 
 ## The same pattern, a different tree
 
@@ -198,7 +208,20 @@ safe but leaves the policy to the model's mood. The tool now reports only the ch
 in plain code, enforces the threshold I measured. **Put the policy where the model cannot argue
 with it.**
 
-## What I got wrong on the way
+## What I learned
+
+- **Shrink the question, not the model.** The same tree that defeats an LLM asked "which of
+  18,946?" is easy as a chain of "which of these four?". Decider, at 2B parameters with retrieval
+  seeds and no LLM, got 25.3% of full codes right; Nova Pro asked directly got 0.3%.
+- **Calibrated is not the same as safe to act.** Path probability made no mistakes above its bar
+  on a two-level tool catalog (17 of 17) and was only a weak signal on an eight-level legal tree.
+  Freeze the bar before the test, and accept "auto-clear nothing" as an answer.
+- **Agreement beats any single confidence.** Three independent sources naming the same code (76%
+  right) was a better trust signal than any one model's probability.
+- **Put the policy where the model cannot argue with it.** The decision is a number; what the
+  agent may do with it is plain code in a Strands intervention.
+
+### What I got wrong on the way
 
 - **Greedy walk with stack backtracking:** cables classified as furniture. Replaced by best-first search on path probability.
 - **Labelling low-confidence forks as Decider decisions:** the first version would have auto-filed a 0.19-confidence guess. Fixed; tariffs now never auto-file.
@@ -216,11 +239,24 @@ Decider, open the demo. The demo streams every Decider fork as it happens and ca
 evaluation runs without a GPU. Every number in this article is regenerated from committed result
 files by `eval/report.py`, `eval/ablation.py` and `eval/charts.py`.
 
+Three recorded runs worth watching (each link opens and plays that run; replays show the winning
+route, not the forks the search tried and abandoned):
+
+- **An Anubis costume.** Decider's first answer was `none_of_these` (52%) over the costume heading
+  (48%), so 21 of its 24 calls explored other parts of the tree. The costume route still won, at
+  CBP's code: https://main.d3o5ktn9yc15oj.amplifyapp.com/#run=N357194
+- **A hardcover book.** Six forks, four of them "Other (anything not covered by ...)" lines in a
+  row, then "Hardbound books" at 60%: https://main.d3o5ktn9yc15oj.amplifyapp.com/#run=N361497
+- **A car alarm with remote start.** At the radio-apparatus heading the right branch came third,
+  at 29%, behind `none_of_these` and "Radar apparatus". One fork later Decider was 97% sure it is
+  radio remote-control apparatus:
+  https://main.d3o5ktn9yc15oj.amplifyapp.com/#run=N359480
+
 - **Run Decider yourself on a free Colab GPU, no AWS account:** `notebooks/try_tarifftrail.ipynb` (tool routing,
   any of the 392 evaluation rulings re-run live, and your own product)
 - **Demo (Classify hosted, Simulate, and 392 recorded real classifications):** https://main.d3o5ktn9yc15oj.amplifyapp.com/
 - **Code and the reusable pattern:** github.com/mahanteshimath/AWS-Strands-Decider-Hackathon, `PATTERN.md`
 - **The pattern in a Strands agent:** `examples/tool_catalog/agent.py`
-- **Video (3 minutes):** https://youtu.be/aU4kPYgsOcY
+- **Video (2:59):** https://youtu.be/aU4kPYgsOcY
 
 *Decision support, not legal advice: a licensed customs broker is responsible for every entry.*
