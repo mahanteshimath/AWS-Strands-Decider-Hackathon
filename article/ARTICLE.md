@@ -1,7 +1,12 @@
-# 18,946 doors and one key: teaching an agent to classify imports without guessing
+# TariffTrail: Strands Decider 2B walks the US tariff tree so the agent never invents a customs code
 
-*Built for the AWS Builder Center "Agent Experience Hackathon: Strands Decider".
+*18,946 doors and one key. Built for the AWS Builder Center "Agent Experience Hackathon: Strands Decider".
 Tags: `#strands-decider-2b` `#policy`. Code (Apache-2.0): github.com/mahanteshimath/AWS-Strands-Decider-Hackathon*
+
+**Decision pattern demonstrated: Policy.** Before the agent may file a customs entry, Strands Decider 2B
+classifies the product into its tariff category, one calibrated `choice` per level of the official
+tree, and that decision sets what the agent is allowed to do next (deny, send back, or hand to a broker).
+The same recipe also does **tool selection** over a 48-tool catalog.
 
 > **TL;DR.** Every US import now needs a 10-digit tariff code. Asked directly, an LLM invents a code
 > that does not exist 91% of the time, and a tool-using agent gets 19% right. **TariffTrail** lets
@@ -20,7 +25,36 @@ Tags: `#strands-decider-2b` `#policy`. Code (Apache-2.0): github.com/mahanteshim
 with its probability, and each dotted red branch is `none_of_these`. It lands on `4901.99.00.70`,
 the code CBP ruled. [Replay this run](https://main.d3o5ktn9yc15oj.amplifyapp.com/#run=N361497).*
 
-The whole pattern, in any Strands agent:
+## The reusable decision recipe: Calibrated Tree Descent
+
+Three parts you can copy into your own agent. Full write-up: [`PATTERN.md`](https://github.com/mahanteshimath/AWS-Strands-Decider-Hackathon/blob/main/PATTERN.md).
+
+**1. The typed question and its option set.** One Decider call per fork of the tree:
+
+```json
+{
+  "state": "PRODUCT FACTS:\n<the product>\n\nCLASSIFIED SO FAR (official tariff wording):\n<path chosen so far>",
+  "questions": {
+    "child": {
+      "type": "choice",
+      "instructions": "Which tariff line in the list describes the product? Choose by the product's facts and the official wording of each line, at this level of the US Harmonized Tariff Schedule.",
+      "criteria": {
+        "A": "Of cotton",
+        "B": "Of synthetic fibres",
+        "C": "Other (anything not covered by: Of cotton; Of synthetic fibres)",
+        "none_of_these": "None of these lines can describe the product; an earlier level was chosen wrongly"
+      }
+    }
+  }
+}
+```
+
+The option-set rules: neutral letters (so the model chooses on meaning, never on a memorised code), the
+tree's own wording, every "Other" rewritten against its siblings, and a `none_of_these` exit below the top
+level. Up to 255 options per fork.
+
+**2. The wiring that puts it in the agent's path.** A decision tool plus a Strands `InterventionHandler`
+on the tool that acts:
 
 ```python
 descent = CalibratedTreeDescent(tree, Decider(), policy=Policy(auto=0.6))   # any tree: tariff codes, tools, runbooks
@@ -29,6 +63,18 @@ agent = Agent(tools=[decision_tool(descent, ledger, name="choose"), act],
               interventions=[DecisionGate(descent, ledger, guarded={"act": "item"}, decide_tool="choose")])
 # act(item=...) is denied for made-up items, sent back if not decided, and paused for a person below the bar
 ```
+
+| Before the guarded call | Strands action |
+|---|---|
+| The item is not a leaf of the tree | `Deny` |
+| It was not chosen by the descent in this session | `Guide` ("decide first") |
+| Its path probability is below `Policy.auto` | `Confirm`: a person approves |
+| Otherwise | `Proceed` |
+
+**3. How to use it.** Wrap your hierarchy in `DictTree` (or implement the four-method `Tree` protocol over
+your data), label 50 cases, run once with `auto` above 1 so nothing auto-acts, read the threshold sweep,
+and set `auto` to the lowest bar your error tolerance allows. If none qualifies, auto-act on nothing.
+`tree_descent.py` and its Decider client use only the Python standard library.
 
 ## The $20 parcel problem
 
@@ -232,6 +278,20 @@ with it.**
 - **No cap on the baseline agent:** $16 of Bedrock spend on one looping product. Hard caps, enforced by a Strands intervention.
 - **A results sync that overwrote a live file:** recovered the rows through `/proc/<pid>/fd` and fixed the runner.
 
+## What's next
+
+After the frozen test I probed the final pick (labelled post-hoc, declared before it touched the test
+set). One extra Bedrock call that reads the *whole* outline of the chosen heading and re-picks the
+10-digit line took the same 332 products from **36.7% to 43.7%** (+34 fixed / -11 broken, McNemar
+p = 0.0008) with Kimi K2.5 on Bedrock; with Nova Pro it was 39.2% (not significant). It cannot fix a wrong
+heading, which is still where two thirds of the misses happen, so it stays out of the app until it is
+confirmed on fresh rulings. Details: [`eval/HEADING_REFINE.md`](https://github.com/mahanteshimath/AWS-Strands-Decider-Hackathon/blob/main/eval/HEADING_REFINE.md).
+
+The full plan, with where every miss happens and what each step should buy, is
+[`docs/what_next.md`](https://github.com/mahanteshimath/AWS-Strands-Decider-Hackathon/blob/main/docs/what_next.md):
+real fallback when retrieval misses the heading, chapter notes in Decider's state, and asking the
+importer the one fact the description leaves out.
+
 ## Try it
 
 `README.md` has the commands: fetch the HTS and the rulings, build the Titan index, serve
@@ -255,6 +315,10 @@ route, not the forks the search tried and abandoned):
 - **Run Decider yourself on a free Colab GPU, no AWS account:** `notebooks/try_tarifftrail.ipynb` (tool routing,
   any of the 392 evaluation rulings re-run live, and your own product)
 - **Demo (Classify hosted, Simulate, and 392 recorded real classifications):** https://main.d3o5ktn9yc15oj.amplifyapp.com/
+  The 392 replays are the evaluated runs. **Classify hosted** runs your product live on the AWS User Group
+  Madurai hosted Decider, a newer build (`hobson-v19`) than the `v1-2610` checkpoint measured above, at
+  its free tier of 10 requests a minute (one to two and a half minutes a product), so read it as a live
+  demo, not as the evaluated system. **Simulate** shows the same search with a keyword stand-in for Decider.
 - **Code and the reusable pattern:** github.com/mahanteshimath/AWS-Strands-Decider-Hackathon, `PATTERN.md`
 - **The pattern in a Strands agent:** `examples/tool_catalog/agent.py`
 - **Video (2:59):** https://youtu.be/aU4kPYgsOcY

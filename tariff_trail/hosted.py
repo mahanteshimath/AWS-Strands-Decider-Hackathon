@@ -30,6 +30,9 @@ WINDOW_S = 60.0
 MONTHLY_FREE_DECISIONS = 2000
 MAX_RETRIES = 3
 HEALTH_TTL_S = 60.0
+QUOTA_RECHECK_S = 3600.0  # after a 402, report the hosted button as unavailable for an hour
+QUOTA_MESSAGE = ("The hosted Decider's free monthly quota (2,000 decisions, shared by every visitor) is used up (402). "
+                 "The 392 recorded runs and Simulate still work.")
 
 _HINTS = {
     401: "check the hosted Decider key (aws_strands_decider_key / DECIDER_API_KEY in .env)",
@@ -75,6 +78,12 @@ _LIMITER = RateLimiter()
 _USAGE_LOCK = threading.Lock()
 _USED = {"decisions": 0, "calls": 0}
 _HEALTH: dict[str, Any] = {"at": 0.0, "value": None, "error": None}
+_QUOTA: dict[str, float] = {"out_at": 0.0}
+
+
+def quota_out(clock: Callable[[], float] = time.monotonic) -> bool:
+    """True if the host answered 402 (monthly quota used up) within the last QUOTA_RECHECK_S."""
+    return bool(_QUOTA["out_at"]) and clock() - _QUOTA["out_at"] < QUOTA_RECHECK_S
 
 
 def usage() -> dict[str, int]:
@@ -136,6 +145,9 @@ class HostedDecider(Decider):
                     retry_after = exc.headers.get("Retry-After") if exc.headers else None
                     self._pause(float(retry_after) if retry_after and retry_after.replace(".", "", 1).isdigit() else 10.0 * attempt)
                     continue
+                if exc.code == 402:
+                    _QUOTA["out_at"] = time.monotonic()
+                    raise RuntimeError(QUOTA_MESSAGE) from None
                 hint = _HINTS.get(exc.code, "")
                 raise RuntimeError(f"hosted decider rejected the request: {exc.code} {hint} {detail}".strip()) from None
             except (urllib.error.URLError, TimeoutError, ConnectionError) as exc:
@@ -154,6 +166,8 @@ class HostedDecider(Decider):
 
     def health(self) -> dict[str, Any]:
         """`{ready, model}` from GET /v1/models, cached so a polling page does not spend requests."""
+        if quota_out():
+            raise DeciderUnavailable(QUOTA_MESSAGE)
         now = time.monotonic()
         if _HEALTH["at"] and now - _HEALTH["at"] < (HEALTH_TTL_S if _HEALTH["value"] else 10.0):
             if _HEALTH["value"]:

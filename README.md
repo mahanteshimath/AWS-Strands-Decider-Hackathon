@@ -156,7 +156,10 @@ changes only the shortlist Bedrock picks from ([`eval/ABLATION.md`](eval/ABLATIO
   rulings (Oct 2021 to Dec 2025) uses. Retrieval can never propose those; the tree walk had 16 of them in its top 3 and
   TariffTrail got 13 right.
 - **The next lever is the final pick.** A wider shortlist holds the answer 56% of the time, yet Bedrock's pick stays
-  at 36%.
+  at 36%. A post-hoc probe, declared before it ran on test, adds one Bedrock call that reads the whole outline of the
+  chosen heading and re-picks the 10-digit line: **36.7% to 43.7%** with Kimi K2.5 (+34 / -11, p = 0.0008), 39.2% with
+  Nova Pro (not significant). Not in the app until it is confirmed on fresh rulings
+  ([`eval/HEADING_REFINE.md`](eval/HEADING_REFINE.md)).
 
 ### Which answers to trust
 
@@ -335,7 +338,8 @@ the tables above with no model access.
 | [`tariff_trail/web/`](tariff_trail/web) | Demo UI (FastAPI + Server-Sent Events) |
 | [`examples/tool_catalog/`](examples/tool_catalog) | The same pattern routing 48 tools, on its own and as a gated Strands agent |
 | [`notebooks/`](notebooks) | Run Decider live on a free Colab GPU: tool routing, real rulings, your own product |
-| [`eval/`](eval) · [`data/`](data) | Runner, reports, ablation, charts, traces, results · fetchers and the leak-checked eval builder |
+| [`eval/`](eval) · [`data/`](data) | Runner, reports, ablation, heading-refine probe, charts, traces, results · fetchers and the leak-checked eval builder |
+| [`docs/what_next.md`](docs/what_next.md) | Where the 210 test misses happen, and the measured plan towards 90% |
 | [`infra/`](infra) | SSM-only EC2, IAM, S3, budget alert, Lambda API and Amplify deploy |
 | [`docs/architecture/`](docs/architecture) | The draw.io sources and exported diagrams |
 | [`video/`](video) · [`article/`](article) | Demo video source (HyperFrames) · Builder Center article |
@@ -358,10 +362,11 @@ heading; defined after the test run) is a second, weaker signal.
 
 ## Ideas and roadmap
 
-Good first issues, roughly in order of impact:
+Good first issues, roughly in order of impact (the measured plan behind them: [`docs/what_next.md`](docs/what_next.md)):
 
 - [ ] Ask for the single missing fact (the `on_missing` hook) in the demo UI instead of guessing.
 - [ ] Better shortlist adjudication: a 7-code shortlist holds the answer 56% of the time, but the pick lands at 36%.
+  Heading refine ([`eval/HEADING_REFINE.md`](eval/HEADING_REFINE.md)) is the first candidate; confirm it on fresh rulings.
 - [ ] Evaluate on messy, real importer descriptions rather than rewritten ones.
 - [ ] Trees for other regimes: EU TARIC, UK Global Tariff, HS-6 only.
 - [ ] Wrap the classifier as an MCP server so any agent can call it.

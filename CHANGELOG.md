@@ -6,6 +6,12 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- `eval/heading_refine.py` and [`eval/HEADING_REFINE.md`](eval/HEADING_REFINE.md): a post-hoc probe of the final
+  pick. One extra Bedrock call reads the whole outline of the chosen heading and re-picks the 10-digit line; declared
+  before it ran on test, it took the 332 test products from 36.7% to 43.7% with Kimi K2.5 (McNemar p = 0.0008) and to
+  39.2% with Nova Pro (not significant). Recorded rows in `eval/results/heading_refine/`; `--stats` reproduces the
+  table with no AWS calls. Not wired into the app.
+- `docs/what_next.md`: where the 210 test misses happen and a measured plan towards 90%.
 - Links to recorded runs: `#run=<ruling>` (for example `#run=N361497`) opens the demo on that run and plays it, and
   replaying any run puts its link in the address bar. `docs/images/route-map.gif` is a real replay for the README and
   the article.
@@ -45,6 +51,9 @@ All notable changes to this project are documented here. The format follows
   request templates, and a GitHub Actions workflow (tests and diagram sync check).
 
 ### Changed
+- A used-up hosted quota (HTTP 402) now gives a plain message pointing to the recorded runs and Simulate, and the
+  hosted button reports unavailable for an hour instead of failing on every try. On the public site the recovery hint
+  no longer suggests Classify local, which it does not have.
 - README rewritten with quickstart, architecture, results, pattern usage, limitations and FAQ.
 
 ## [0.1.0] - 2026-10-18

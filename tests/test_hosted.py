@@ -63,10 +63,12 @@ ANSWER = {"answers": {"child": {"type": "choice", "choice": "B", "probabilities"
 @pytest.fixture()
 def server():
     Stub.seen, Stub.script = [], []
+    hosted._QUOTA["out_at"] = 0.0
     httpd = HTTPServer(("127.0.0.1", 0), Stub)
     threading.Thread(target=httpd.serve_forever, daemon=True).start()
     yield f"http://127.0.0.1:{httpd.server_port}"
     httpd.shutdown()
+    hosted._QUOTA["out_at"] = 0.0
 
 
 def make(url: str, **kw) -> HostedDecider:
@@ -119,6 +121,21 @@ def test_quota_and_bad_key_errors_are_plain_and_never_echo_the_key(server):
         make(server).ask("s", CHOICE)
     assert "key" in str(bad.value)
     assert "dcd_test_key" not in str(quota.value) + str(bad.value)
+
+
+def test_a_used_up_quota_turns_the_hosted_button_off_with_a_plain_reason(server, monkeypatch):
+    hosted._HEALTH.update(at=0.0, value=None, error=None)
+    Stub.script = [(402, {"error": "quota"}, {})]
+    with pytest.raises(RuntimeError) as quota:
+        make(server).ask("s", CHOICE)
+    assert "recorded runs" in str(quota.value) and "402" in str(quota.value)
+    assert hosted.quota_out()
+    with pytest.raises(DeciderUnavailable, match="used up"):
+        make(server).health()
+    monkeypatch.setattr(hosted, "hosted_key", lambda: "dcd_test_key")
+    s = hosted.status()
+    assert s["ready"] is False and "Simulate" in s["error"]
+    assert hosted.quota_out(clock=lambda: hosted._QUOTA["out_at"] + hosted.QUOTA_RECHECK_S + 1) is False
 
 
 def test_missing_key_and_unreachable_host_raise_decider_unavailable():

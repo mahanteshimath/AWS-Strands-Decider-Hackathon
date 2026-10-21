@@ -619,7 +619,8 @@ async function runStream(kind) {
   startTicker(sim ? "Simulating" : hosted ? "Hosted Decider" : "Decider live");
   render();
   const RECOVER = sim ? "Try again, or replay a recorded run."
-    : hosted ? "Check the hosted Decider status above, try Classify local, press Simulate, or replay a recorded run."
+    : hosted ? (CFG.local === false ? "Press Simulate, or replay one of the 392 recorded runs."
+      : "Check the hosted Decider status above, try Classify local, press Simulate, or replay a recorded run.")
     : "Check that Decider is running, press Simulate, or replay a recorded run.";
   let finished = false;
   const handle = (chunk) => {
