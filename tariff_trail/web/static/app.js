@@ -466,8 +466,8 @@ function renderResult(r, gold) {
     if (r.code) setCode(r.code, true);
     else { $("code").className = "digits none"; $("code").textContent = "No code reached"; }
 
-    // The review tiers were measured on the evaluated local model. A hosted v19 run reports agreement but never claims a tier.
-    const unmeasured = "The review tiers were measured on the evaluated local model, not on hosted v19, so a licensed broker reviews this code in full.";
+    // The review tiers were measured on the evaluated local model. A hosted run reports agreement but never claims a tier.
+    const unmeasured = "The review tiers were measured on the evaluated local model, not on the hosted strands-decider-2B, so a licensed broker reviews this code in full.";
     const tier = r.simulated ? ["sim", "Simulated", "A keyword stand-in answered each fork, not Strands Decider. It shows how the search moves and backtracks; it is not a tariff answer."]
       : r.decider_source === "hosted" && r.fast_track ? ["heading", "Sources agree", `Decider, Bedrock and past rulings agree. ${unmeasured}`]
       : r.decider_source === "hosted" && r.heading_agreed ? ["heading", `Heading ${r.heading_agreed} agreed`, `Decider, Bedrock and past rulings land in heading ${r.heading_agreed}, not on the same full code. ${unmeasured}`]
@@ -507,7 +507,7 @@ function renderResult(r, gold) {
       add("Wrong turns explored", String(r.backtracks || 0));
     } else {
       add("Decider calls", String(r.decider_calls ?? state.forks.length));
-      if (r.decider_source === "hosted") add("Decider", "hosted v19");
+      if (r.decider_source === "hosted") add("Hosted Decider", HOSTED_LABEL);
       add("LLM calls", String(r.llm_calls ?? 0));
     }
     if (r.wall_ms) add("Time", `${(r.wall_ms / 1000).toFixed(1)} s`);
@@ -608,7 +608,7 @@ async function runStream(kind) {
     note.hidden = false;
   } else if (hosted) {
     const note = $("recorded");
-    note.textContent = "Hosted Decider run (hobson-v19 on the AWS User Group Madurai free tier, 10 requests a minute). The scores on this page were measured with the local v1 model, so read this as a live demo, not as the evaluated system.";
+    note.textContent = "Hosted Decider run (strands-decider-2B on the AWS User Group Madurai free tier, 10 requests a minute). The scores on this page were measured with the locally served model, so read this as a live demo, not as the evaluated system.";
     note.title = note.textContent;
     note.hidden = false;
   }
@@ -701,6 +701,8 @@ function revealStage() {
 /* ---------------- boot ---------------- */
 
 // The hosted button and its status line exist only when the server has a hosted Decider key (never on the static site).
+const HOSTED_LABEL = "strands-decider-2B"; // shown in place of the hosted build id
+
 function applyHosted(h) {
   const present = !!h;
   $("hosted").hidden = !present;
@@ -710,7 +712,7 @@ function applyHosted(h) {
   document.body.classList.toggle("hosted-ready", state.hostedReady);
   if (!present) return;
   if (!state.running) $("hosted").disabled = !state.hostedReady;
-  const model = String(h.model || "").replace(/^strands-decider-(2b-)?/i, "");
+  const model = HOSTED_LABEL;
   $("status-hosted-text").textContent = h.ready ? `Hosted Decider ready, ${model} (${h.used_this_session} sent)` : "Hosted Decider unavailable";
   $("status-hosted").title = h.ready
     ? `${h.used_this_session} decisions sent this session. Free tier: ${h.monthly_free.toLocaleString("en-US")} a month, ${h.per_minute} requests a minute.`
