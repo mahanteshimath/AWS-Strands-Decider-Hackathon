@@ -16,14 +16,13 @@ Amazon Bedrock call choosing among *real* codes. It cannot invent a code, and it
 [![Hackathon](https://img.shields.io/badge/AWS%20Builder%20Center-Strands%20Decider-ff9900.svg)](#hackathon)
 
 **[▶ Video (2:59)](https://youtu.be/aU4kPYgsOcY)** ·
+**[AWS Builder Center article](https://builder.aws.com/project/3L03iMVxl794WGYKsPQOUPkjtQ7/tarifftrail-strands-decider-2b-walks-the-us-tariff-tree-so-the-agent-never-invents-a-customs-code)** ·
 **[Live demo](https://main.d3o5ktn9yc15oj.amplifyapp.com/)** ·
 **[Run it on a free GPU](https://colab.research.google.com/github/mahanteshimath/AWS-Strands-Decider-Hackathon/blob/main/notebooks/try_tarifftrail.ipynb)** ·
 **[The reusable pattern](PATTERN.md)** ·
 **[Architecture](#architecture)** ·
 **[Results](#results)** ·
 **[Quickstart](#quickstart)**
-
-<!-- TODO at submission: add the Builder Center article link to this row once it is published. -->
 
 <a href="https://main.d3o5ktn9yc15oj.amplifyapp.com/#run=N361497"><img src="docs/images/route-map.gif" alt="TariffTrail demo: Strands Decider walks the US tariff tree one fork at a time, with a probability on every branch, and lands a hardcover book on 4901.99.00.70, the exact 10-digit code CBP ruled, with a fast-track review stamp" width="860"></a>
 
